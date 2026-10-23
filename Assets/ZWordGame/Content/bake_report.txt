@@ -1,0 +1,45 @@
+ZWord bake report 10/22/2026 11:28:16 AM
+Dictionary: 172823 words
+[CITY] 81 usable words
+[CITY] 25 levels, 0 words unused, max reuse 2
+[ELECTRONIC] 74 usable words
+[ELECTRONIC] 25 levels, 0 words unused, max reuse 5
+[THINGS] 75 usable words
+[THINGS] 25 levels, 1 words unused, max reuse 2
+[MEALS] 76 usable words
+[MEALS] 25 levels, 0 words unused, max reuse 3
+[MUSIC] 70 usable words
+[MUSIC] 25 levels, 0 words unused, max reuse 3
+[SPORT] 66 usable words
+[SPORT] 25 levels, 0 words unused, max reuse 2
+[COUNTRIES] 76 usable words
+[COUNTRIES] 25 levels, 1 words unused, max reuse 2
+[CINEMA] 68 usable words
+[CINEMA] 25 levels, 0 words unused, max reuse 2
+  [ANIMALS] skipped (must be 3-8 letters A-Z): OX
+[ANIMALS] 72 usable words
+[ANIMALS] 25 levels, 0 words unused, max reuse 2
+[NATURE] 81 usable words
+[NATURE] 25 levels, 1 words unused, max reuse 2
+[FRUIT & VEG] 64 usable words
+[FRUIT & VEG] 25 levels, 0 words unused, max reuse 3
+[JOBS] 62 usable words
+[JOBS] 25 levels, 0 words unused, max reuse 5
+[BODY] 56 usable words
+[BODY] 25 levels, 0 words unused, max reuse 3
+[CLOTHES] 52 usable words
+[CLOTHES] 25 levels, 0 words unused, max reuse 3
+[WEATHER] 56 usable words
+[WEATHER] 25 levels, 0 words unused, max reuse 3
+[SPACE] 51 usable words
+[SPACE] 25 levels, 0 words unused, max reuse 4
+[OCEAN] 56 usable words
+[OCEAN] 25 levels, 0 words unused, max reuse 2
+[KITCHEN] 60 usable words
+[KITCHEN] 25 levels, 0 words unused, max reuse 2
+[SCHOOL] 58 usable words
+[SCHOOL] 25 levels, 0 words unused, max reuse 2
+[TRAVEL] 54 usable words
+[TRAVEL] 25 levels, 0 words unused, max reuse 3
+
+OK: 20 categories, 500 levels.
