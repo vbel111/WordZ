@@ -6,7 +6,7 @@ namespace ZWord.EditorTools
     public class ArtImporter : AssetPostprocessor
     {
         // bump to make Unity re-run these import rules on existing textures
-        public override uint GetVersion() => 4;
+        public override uint GetVersion() => 5;
 
         void OnPreprocessTexture()
         {
@@ -45,8 +45,10 @@ namespace ZWord.EditorTools
             ti.alphaIsTransparency = true;
             ti.wrapMode = UnityEngine.TextureWrapMode.Clamp;
             bool big = assetPath.Contains("/Maps/") || assetPath.Contains("/Backgrounds/") || assetPath.Contains("/Logo/");
-            ti.maxTextureSize = big ? 2048 : 256;
-            ti.textureCompression = TextureImporterCompression.Compressed;
+            ti.maxTextureSize = appIcon ? 1024 : big ? 2048 : 256;
+            // the iOS/Android icon exporter can't read compressed textures (ASTC) - keep the icon as raw RGBA
+            ti.textureCompression = appIcon ? TextureImporterCompression.Uncompressed : TextureImporterCompression.Compressed;
+            if (appIcon) ti.isReadable = true;
         }
 
         /// <summary>New or replaced map art is picked up by the Theme automatically.</summary>

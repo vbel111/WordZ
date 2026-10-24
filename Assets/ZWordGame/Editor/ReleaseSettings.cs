@@ -43,9 +43,41 @@ namespace ZWord.EditorTools
             PlayerSettings.iOS.targetOSVersionString = "15.0";
             PlayerSettings.iOS.buildNumber = GameConfig.BuildNumber.ToString();
             PlayerSettings.iOS.appleEnableAutomaticSigning = false; // Build Automation signs with your .p12 + profile
+            PlayerSettings.iOS.appleDeveloperTeamID = AppleTeamId;
+            UseCocoaPodsForIOS();
 
             AssetDatabase.SaveAssets();
             Debug.Log($"[ZWord] Release settings applied: {GameConfig.BundleId} v{GameConfig.Version} ({GameConfig.BuildNumber}).");
+        }
+
+        /// <summary>Apple Developer team (Membership page) - Xcode needs it to sign every target, incl. package bundles.</summary>
+        public const string AppleTeamId = "N62GU9V2QY";
+
+        /// <summary>
+        /// RevenueCat's iOS SDK comes through Swift Package Manager by default (EDM4U 1.2.187+). Its SPM resource bundle
+        /// then fails to sign on Build Automation ("RevenueCat_RevenueCat requires a development team"). CocoaPods
+        /// doesn't have that problem, so switch EDM4U's iOS Resolver to CocoaPods.
+        /// Same as Assets > External Dependency Manager > iOS Resolver > Settings > untick "Swift Package Manager Enabled".
+        /// </summary>
+        public static void UseCocoaPodsForIOS()
+        {
+            bool done = false;
+            foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var t = asm.GetType("Google.IOSResolver", false);
+                if (t == null) continue;
+                foreach (var p in t.GetProperties(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic))
+                {
+                    if (p.PropertyType != typeof(bool) || !p.CanWrite) continue;
+                    var name = p.Name.ToLowerInvariant();
+                    if (!name.Contains("swiftpackagemanager") && !name.Contains("spm")) continue;
+                    if (!name.Contains("enable")) continue;
+                    p.SetValue(null, false);
+                    Debug.Log("[ZWord] iOS Resolver: " + p.Name + " = false (use CocoaPods)");
+                    done = true;
+                }
+            }
+            if (!done) Debug.LogWarning("[ZWord] Couldn't switch the iOS Resolver to CocoaPods automatically - untick 'Swift Package Manager Enabled' in Assets > External Dependency Manager > iOS Resolver > Settings.");
         }
 
 #if UNITY_CLOUD_BUILD
@@ -55,6 +87,8 @@ namespace ZWord.EditorTools
         /// </summary>
         public static void PreExport(UnityEngine.CloudBuild.BuildManifestObject manifest)
         {
+            PlayerSettings.iOS.appleDeveloperTeamID = AppleTeamId;
+            UseCocoaPodsForIOS();
             var n = manifest.GetValue<string>("buildNumber");
             if (int.TryParse(n, out int build) && build > 0)
             {
