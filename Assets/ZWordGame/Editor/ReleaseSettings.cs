@@ -80,6 +80,31 @@ namespace ZWord.EditorTools
             if (!done) Debug.LogWarning("[ZWord] Couldn't switch the iOS Resolver to CocoaPods automatically - untick 'Swift Package Manager Enabled' in Assets > External Dependency Manager > iOS Resolver > Settings.");
         }
 
+        /// <summary>
+        /// Every iOS/Android build gets a new, always-increasing store build number from the build time
+        /// (iOS "20261026.2135", Android minutes since 2026). Apple rejects an upload that reuses a build number,
+        /// so this works without any Build Automation setting and without remembering to bump BuildNumber.
+        /// </summary>
+        class AutoBuildNumber : UnityEditor.Build.IPreprocessBuildWithReport
+        {
+            public int callbackOrder => -100;
+            public void OnPreprocessBuild(UnityEditor.Build.Reporting.BuildReport report)
+            {
+                var now = System.DateTime.UtcNow;
+                var t = report.summary.platform;
+                if (t == BuildTarget.iOS)
+                {
+                    PlayerSettings.iOS.buildNumber = now.ToString("yyyyMMdd") + "." + now.ToString("HHmm");
+                    Debug.Log("[ZWord] iOS build number " + PlayerSettings.iOS.buildNumber);
+                }
+                else if (t == BuildTarget.Android)
+                {
+                    PlayerSettings.Android.bundleVersionCode = (int)(now - new System.DateTime(2026, 1, 1)).TotalMinutes;
+                    Debug.Log("[ZWord] Android version code " + PlayerSettings.Android.bundleVersionCode);
+                }
+            }
+        }
+
 #if UNITY_CLOUD_BUILD
         /// <summary>
         /// Build Automation "Pre-export method": ZWord.EditorTools.ReleaseSettings.PreExport
@@ -89,13 +114,7 @@ namespace ZWord.EditorTools
         {
             PlayerSettings.iOS.appleDeveloperTeamID = AppleTeamId;
             UseCocoaPodsForIOS();
-            var n = manifest.GetValue<string>("buildNumber");
-            if (int.TryParse(n, out int build) && build > 0)
-            {
-                PlayerSettings.iOS.buildNumber = build.ToString();
-                PlayerSettings.Android.bundleVersionCode = build;
-                Debug.Log("[ZWord] Cloud build number " + build);
-            }
+            // build numbers come from AutoBuildNumber (build time), so they always go up
         }
 #endif
 
