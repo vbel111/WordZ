@@ -41,7 +41,9 @@ namespace ZWord.EditorTools
             }
             else if (!verbose && theme.autoFillVersion >= CurrentFillVersion)
             {
-                return; // already set up; only refill when asked from the menu
+                // already set up; still make sure every category (new events too) has its icon and map
+                if (SyncCategoryArt(theme)) { EditorUtility.SetDirty(theme); AssetDatabase.SaveAssets(); }
+                return;
             }
 
             bool changed = created;
@@ -82,7 +84,7 @@ namespace ZWord.EditorTools
                     theme.homeMusic = homePaths.Select(p => AssetDatabase.LoadAssetAtPath<AudioClip>(p)).Where(c => c).ToArray();
                     changed = true;
                 }
-                if (theme.gameMusic == null || theme.gameMusic.Length == 0)
+                if ((theme.gameMusic == null || theme.gameMusic.Length == 0) && Resources.LoadAll<AudioClip>("Music/Game").Length == 0) // the Word Z originals replace the pack loops
                 {
                     theme.gameMusic = gamePaths.Select(p => AssetDatabase.LoadAssetAtPath<AudioClip>(p)).Where(c => c).ToArray();
                     changed = true;
@@ -318,6 +320,24 @@ namespace ZWord.EditorTools
                 if (current == null || current.Length == 0 || current[0] == null)
                     PlayerSettings.SetIcons(UnityEditor.Build.NamedBuildTarget.Unknown, new[] { appIcon }, IconKind.Any);
             }
+        }
+
+        /// <summary>Adds entries for new categories and fills any missing icon or map. True when something changed.</summary>
+        public static bool SyncCategoryArt(Theme t)
+        {
+            if (t == null) return false;
+            int before = t.categoryArt?.Length ?? 0;
+            var missing = t.categoryArt?.Count(a => a != null && (a.icon == null || a.mapBackground == null)) ?? 0;
+            FillCategoryArt(t);
+            bool changed = (t.categoryArt?.Length ?? 0) != before;
+            foreach (var a in t.categoryArt)
+            {
+                if (a == null || a.icon != null) continue;
+                a.icon = AssetDatabase.LoadAssetAtPath<Sprite>(ArtDir + "/Categories/cat_" + Slug(a.category) + ".png");
+                changed |= a.icon != null;
+            }
+            if (changed || missing > 0) changed |= AssignMaps(t) > 0;
+            return changed;
         }
 
         /// <summary>One empty entry per category so you can drop in icons and map backgrounds by name.</summary>

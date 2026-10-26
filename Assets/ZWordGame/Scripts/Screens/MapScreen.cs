@@ -29,6 +29,7 @@ namespace ZWord
             viewport.offsetMax = new Vector2(0, -180);
             viewport.gameObject.AddComponent<RectMask2D>();
             viewport.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0);
+            SafeAreaBleed.Add(viewport); // map art also fills the notch / home-bar area
 
             var art = Theme.Current.ArtFor(category.Name);
             var bgSprite = art != null ? art.mapBackground : null;
@@ -155,7 +156,8 @@ namespace ZWord
             bool done = i < Save.Completed(cat);
             bool isCurrent = i == current && !done;
             bool locked = !done && !isCurrent;
-            float size = isCurrent ? 150 : 112;
+            bool boss = LevelDatabase.IsBoss(cat, i);
+            float size = (isCurrent ? 150 : 112) * (boss ? 1.25f : 1f);
 
             var root = UI.Rect("Level" + (i + 1), parent);
             root.anchorMin = root.anchorMax = Vector2.zero;
@@ -200,6 +202,20 @@ namespace ZWord
                     var st = UI.Img(root, starSprite, s < stars ? Color.white : new Color(0.3f, 0.25f, 0.3f, 0.75f), "Star" + s);
                     st.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(-34 + s * 34, -14 + (s == 1 ? -6 : 0)), new Vector2(40, 40));
                 }
+            }
+            if (boss)
+            {
+                // boss node: crown on top (gold once beaten) and a BOSS label
+                var crownSprite = Theme.Current.crown;
+                if (crownSprite != null)
+                {
+                    var crown = UI.Img(root, crownSprite, Save.HasCrown(cat) || !locked ? Color.white : new Color(0.55f, 0.5f, 0.5f, 1f), "Crown");
+                    crown.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(isCurrent ? 70 : 0, 26), new Vector2(size * 0.62f, size * 0.5f));
+                    crown.preserveAspect = true;
+                }
+                var tag = UI.Label(root, "BOSS", 30, Color.white, TextAnchor.MiddleCenter);
+                tag.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, done ? -56 : -22), new Vector2(160, 40));
+                UI.Outlined(tag);
             }
             if (isCurrent)
             {
@@ -258,8 +274,12 @@ namespace ZWord
             }
             else if (!allOpened)
             {
-                var needLbl = UI.Label(card, need + "★", 28, Skin.InkSoft, TextAnchor.MiddleCenter, false);
-                needLbl.rectTransform.Place(new Vector2(1, 0), new Vector2(-86, 22), new Vector2(120, 34));
+                // the font has no star glyph, so draw the number + a star sprite
+                var needLbl = UI.Label(card, need.ToString(), 28, Skin.InkSoft, TextAnchor.MiddleRight, false);
+                needLbl.rectTransform.Place(new Vector2(1, 0), new Vector2(-106, 22), new Vector2(80, 34));
+                var needStar = UI.Img(card, Sprites.Star, Skin.Gold, "NeedStar");
+                needStar.rectTransform.Place(new Vector2(1, 0), new Vector2(-50, 22), new Vector2(30, 30));
+                needStar.preserveAspect = true;
             }
         }
 

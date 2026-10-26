@@ -59,6 +59,7 @@ namespace ZWord
                 case "KITCHEN": case "MEALS": return (AmbienceKind.Steam, Color.white);
                 case "SCHOOL": return (AmbienceKind.Letters, Color.white);
                 case "CITY": case "JOBS": case "TRAVEL": return (AmbienceKind.Birds, Palette.Hex("3B2414"));
+                case "HALLOWEEN": return (AmbienceKind.Fireflies, Palette.Hex("FFC93C"));
                 default: return (AmbienceKind.Fireflies, Palette.Hex("FFE58A"));
             }
         }

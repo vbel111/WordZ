@@ -16,6 +16,9 @@ namespace ZWord
         public List<int> stars = new List<int>();
         public List<int> best = new List<int>();   // best score per level
         public int chests;                           // map chests opened (at 25 / 50 / 75 stars)
+        public List<string> words = new List<string>();   // Word Book: answer words found in this category
+        public bool bookClaimed;                     // Word Book page completed and its reward claimed
+        public bool crown;                           // boss level (last board) beaten
     }
 
     /// <summary>Everything we persist. Bump <see cref="CurrentVersion"/> and extend Migrate() when adding fields.</summary>
@@ -73,7 +76,16 @@ namespace ZWord
 
         // quests (achievements): claimed tier per quest
         public int[] questTiers = new int[0];
+        public bool bookSeeded;                     // Word Book filled in from levels finished before it existed
+        public List<string> badges = new List<string>();   // event badges earned (e.g. "HALLOWEEN 2026")
+        public int bossWins;                        // boss boards beaten (first time each)
+        public string goldDate = "";                // golden hexes: day + how many paid out that day (max per day)
+        public int goldCount;
+        public int goldenHexes;                     // lifetime golden hexes found
+        public bool remindersOn;                    // opt-in local notifications
+        public bool remindersAsked;                 // the soft "want reminders?" popup was shown
         public bool supporter;                      // bought the one-time Supporter Pack
+        public bool pro;                            // last known "wordz_pro" entitlement (RevenueCat is the source of truth)
 
         // meta / onboarding (used from M3 on)
         public bool tutorialDone;
@@ -176,7 +188,10 @@ namespace ZWord
             {
                 if (c.stars == null) c.stars = new List<int>();
                 if (c.best == null) c.best = new List<int>();
+                if (c.words == null) c.words = new List<string>();
             }
+            if (d.badges == null) d.badges = new List<string>();
+            if (d.goldDate == null) d.goldDate = "";
             if (d.version < 2)
             {
                 // v1 kept score points in "coins". They become Stars; coins and gems start fresh.
@@ -319,6 +334,26 @@ namespace ZWord
             return true;
         }
 
+        // ---------------- Word Book / boss crowns / badges ----------------
+
+        /// <summary>Adds a found answer word to the category's Word Book page. True if it is new.</summary>
+        public static bool RecordWord(int cat, string word)
+        {
+            var cp = Cat(cat);
+            if (cp.words.Contains(word)) return false;
+            cp.words.Add(word);
+            return true;
+        }
+
+        public static List<string> BookWords(int cat) => Cat(cat).words;
+        public static bool BookClaimed(int cat) => Cat(cat).bookClaimed;
+        public static void SetBookClaimed(int cat) { Cat(cat).bookClaimed = true; Write(); }
+
+        public static bool HasCrown(int cat) => Cat(cat).crown;
+        public static void SetCrown(int cat) { Cat(cat).crown = true; Write(); }
+
+        public static bool HasBadge(string badge) => Data.badges.Contains(badge);
+
         public static int ChestsOpened(int cat) => Cat(cat).chests;
 
         public static void SetChestsOpened(int cat, int n)
@@ -398,13 +433,17 @@ namespace ZWord
             var keepSfx = Data.sfxVolume;
             var keepHaptics = Data.haptics;
             var keepName = Data.playerName;
+            var keepReminders = Data.remindersOn;
+            var keepAsked = Data.remindersAsked;
             data = new SaveData
             {
                 firstLaunchUtc = DateTime.UtcNow.ToString("o"),
                 musicVolume = keepMusic,
                 sfxVolume = keepSfx,
                 haptics = keepHaptics,
-                playerName = keepName
+                playerName = keepName,
+                remindersOn = keepReminders,
+                remindersAsked = keepAsked
             };
             Write();
             WalletChanged?.Invoke();

@@ -91,8 +91,9 @@ namespace ZWord.EditorTools
                 foreach (var def in defs.categories)
                 {
                     var words = CleanWords(def, dict, report);
-                    var cp = new CategoryPack { name = def.name, color = def.color, group = def.group, cost = def.cost };
-                    BakeCategory(def.name, words, cp, report, errors);
+                    var cp = new CategoryPack { name = def.name, color = def.color, group = def.group, cost = def.cost,
+                                                eventStart = def.eventStart, eventEnd = def.eventEnd, badge = def.badge };
+                    BakeCategory(def.name, words, cp, BoardShapes.RampFor(def.levels), report, errors);
                     pack.categories.Add(cp);
                 }
 
@@ -158,11 +159,10 @@ namespace ZWord.EditorTools
             return result;
         }
 
-        static void BakeCategory(string name, List<string> pool, CategoryPack cp, StringBuilder report, List<string> errors)
+        static void BakeCategory(string name, List<string> pool, CategoryPack cp, RampStep[] ramp, StringBuilder report, List<string> errors)
         {
             var usage = pool.ToDictionary(w => w, w => 0);
             var prev = new HashSet<string>();
-            var ramp = BoardShapes.Ramp;
 
             for (int li = 0; li < ramp.Length; li++)
             {

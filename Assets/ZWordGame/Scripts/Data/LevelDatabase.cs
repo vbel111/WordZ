@@ -21,6 +21,9 @@ namespace ZWord
         public string color;
         public int group;
         public int cost;
+        public string eventStart;   // limited-time event: first day (yyyy-MM-dd), empty for normal categories
+        public string eventEnd;     // last day (inclusive)
+        public string badge;        // badge earned by finishing every event level
         public List<LevelEntry> levels = new List<LevelEntry>();
     }
 
@@ -59,6 +62,10 @@ namespace ZWord
         public bool properNouns;
         public string allow;
         public string words;
+        public string eventStart;   // set both dates to make this a limited-time event (shown only between them)
+        public string eventEnd;
+        public int levels;          // level count (0 = the normal 25)
+        public string badge;        // event badge name
     }
 
     /// <summary>Loads the baked levels at runtime. If they're missing, the game falls back to generating levels on the fly.</summary>
@@ -98,6 +105,7 @@ namespace ZWord
                 {
                     var c = p.categories[i];
                     categories[i] = new Category(c.name, c.color, c.group, c.cost, c.levels.Count);
+                    categories[i].SetEvent(c.eventStart, c.eventEnd, c.badge);
                 }
             }
             catch (Exception e)
@@ -105,6 +113,41 @@ namespace ZWord
                 Debug.LogError("[ZWord] Could not read baked levels: " + e.Message);
                 pack = null;
             }
+        }
+
+        static Dictionary<int, string[]> wordsCache = new Dictionary<int, string[]>();
+
+        /// <summary>Every answer word used in a category's levels (sorted A-Z) - the Word Book page for it.</summary>
+        public static string[] WordsIn(int cat)
+        {
+            if (wordsCache.TryGetValue(cat, out var cached)) return cached;
+            var set = new SortedSet<string>(StringComparer.Ordinal);
+            if (Loaded && cat >= 0 && cat < pack.categories.Count)
+                foreach (var l in pack.categories[cat].levels)
+                    foreach (var w in l.words) set.Add(w.w);
+            else if (cat >= 0 && cat < WordData.Categories.Length)
+                foreach (var w in WordData.Categories[cat].Words) set.Add(w);
+            var arr = new string[set.Count];
+            set.CopyTo(arr);
+            wordsCache[cat] = arr;
+            return arr;
+        }
+
+        /// <summary>Answer words of one baked level.</summary>
+        public static IEnumerable<string> WordsOfLevel(int cat, int lvl)
+        {
+            if (!Loaded || cat < 0 || cat >= pack.categories.Count) yield break;
+            var levels = pack.categories[cat].levels;
+            if (lvl < 0 || lvl >= levels.Count) yield break;
+            foreach (var w in levels[lvl].words) yield return w.w;
+        }
+
+        /// <summary>A boss board (the 37-tile honeycomb at level 25 / 50 and at the end of events; crown reward).</summary>
+        public static bool IsBoss(int cat, int lvl)
+        {
+            if (!Loaded || cat < 0 || cat >= pack.categories.Count) return false;
+            var levels = pack.categories[cat].levels;
+            return lvl >= 0 && lvl < levels.Count && levels[lvl].cells.Length / 2 >= BoardShapes.BossCells;
         }
 
         public static int LevelCount(int cat) => Loaded ? pack.categories[cat].levels.Count : WordData.FallbackLevels;

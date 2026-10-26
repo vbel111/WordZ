@@ -1,45 +1,47 @@
-ZWord bake report 10/22/2026 11:28:16 AM
+ZWord bake report 10/26/2026 6:06:24 PM
 Dictionary: 172823 words
-[CITY] 81 usable words
-[CITY] 25 levels, 0 words unused, max reuse 2
-[ELECTRONIC] 74 usable words
-[ELECTRONIC] 25 levels, 0 words unused, max reuse 5
-[THINGS] 75 usable words
-[THINGS] 25 levels, 1 words unused, max reuse 2
-[MEALS] 76 usable words
-[MEALS] 25 levels, 0 words unused, max reuse 3
-[MUSIC] 70 usable words
-[MUSIC] 25 levels, 0 words unused, max reuse 3
-[SPORT] 66 usable words
-[SPORT] 25 levels, 0 words unused, max reuse 2
-[COUNTRIES] 76 usable words
-[COUNTRIES] 25 levels, 1 words unused, max reuse 2
-[CINEMA] 68 usable words
-[CINEMA] 25 levels, 0 words unused, max reuse 2
+[CITY] 154 usable words
+[CITY] 50 levels, 0 words unused, max reuse 2
+[ELECTRONIC] 121 usable words
+[ELECTRONIC] 50 levels, 0 words unused, max reuse 3
+[THINGS] 153 usable words
+[THINGS] 50 levels, 3 words unused, max reuse 2
+[MEALS] 143 usable words
+[MEALS] 50 levels, 0 words unused, max reuse 2
+[MUSIC] 133 usable words
+[MUSIC] 50 levels, 0 words unused, max reuse 2
+[SPORT] 128 usable words
+[SPORT] 50 levels, 0 words unused, max reuse 2
+[COUNTRIES] 126 usable words
+[COUNTRIES] 50 levels, 0 words unused, max reuse 4
+[CINEMA] 125 usable words
+[CINEMA] 50 levels, 0 words unused, max reuse 2
   [ANIMALS] skipped (must be 3-8 letters A-Z): OX
-[ANIMALS] 72 usable words
-[ANIMALS] 25 levels, 0 words unused, max reuse 2
-[NATURE] 81 usable words
-[NATURE] 25 levels, 1 words unused, max reuse 2
-[FRUIT & VEG] 64 usable words
-[FRUIT & VEG] 25 levels, 0 words unused, max reuse 3
-[JOBS] 62 usable words
-[JOBS] 25 levels, 0 words unused, max reuse 5
-[BODY] 56 usable words
-[BODY] 25 levels, 0 words unused, max reuse 3
-[CLOTHES] 52 usable words
-[CLOTHES] 25 levels, 0 words unused, max reuse 3
-[WEATHER] 56 usable words
-[WEATHER] 25 levels, 0 words unused, max reuse 3
-[SPACE] 51 usable words
-[SPACE] 25 levels, 0 words unused, max reuse 4
-[OCEAN] 56 usable words
-[OCEAN] 25 levels, 0 words unused, max reuse 2
-[KITCHEN] 60 usable words
-[KITCHEN] 25 levels, 0 words unused, max reuse 2
-[SCHOOL] 58 usable words
-[SCHOOL] 25 levels, 0 words unused, max reuse 2
-[TRAVEL] 54 usable words
-[TRAVEL] 25 levels, 0 words unused, max reuse 3
+[ANIMALS] 145 usable words
+[ANIMALS] 50 levels, 4 words unused, max reuse 2
+[NATURE] 149 usable words
+[NATURE] 50 levels, 2 words unused, max reuse 2
+[FRUIT & VEG] 110 usable words
+[FRUIT & VEG] 50 levels, 0 words unused, max reuse 3
+[JOBS] 111 usable words
+[JOBS] 50 levels, 0 words unused, max reuse 6
+[BODY] 119 usable words
+[BODY] 50 levels, 5 words unused, max reuse 3
+[CLOTHES] 112 usable words
+[CLOTHES] 50 levels, 0 words unused, max reuse 2
+[WEATHER] 107 usable words
+[WEATHER] 50 levels, 0 words unused, max reuse 3
+[SPACE] 96 usable words
+[SPACE] 50 levels, 0 words unused, max reuse 5
+[OCEAN] 116 usable words
+[OCEAN] 50 levels, 0 words unused, max reuse 3
+[KITCHEN] 125 usable words
+[KITCHEN] 50 levels, 1 words unused, max reuse 2
+[SCHOOL] 114 usable words
+[SCHOOL] 50 levels, 0 words unused, max reuse 3
+[TRAVEL] 114 usable words
+[TRAVEL] 50 levels, 0 words unused, max reuse 2
+[HALLOWEEN] 136 usable words
+[HALLOWEEN] 15 levels, 73 words unused, max reuse 1
 
-OK: 20 categories, 500 levels.
+OK: 21 categories, 1015 levels.

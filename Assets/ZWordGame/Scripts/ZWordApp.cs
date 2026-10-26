@@ -168,8 +168,12 @@ namespace ZWord
             ((RectTransform)quit.transform).Place(new Vector2(0.5f, 0), new Vector2(160, 110), new Vector2(290, 120));
         }
 
-        void OnApplicationPause(bool paused) { if (paused) Save.Write(); }
-        void OnApplicationQuit() => Save.Write();
+        void OnApplicationPause(bool paused)
+        {
+            if (paused) { Save.Write(); Reminders.Reschedule(); }
+            else Store.OnResume();   // pick up subscription renewals / expirations / refunds
+        }
+        void OnApplicationQuit() { Save.Write(); Reminders.Reschedule(); }
 
         // ---------------- Navigation ----------------
 
@@ -239,14 +243,15 @@ namespace ZWord
         public void ShowShop(int tab) => ShopScreen.Open(tab);
         public void ShowQuests() => MetaScreens.OpenQuests();
 
-        /// <summary>Red badge count for the home dock buttons (Daily, Challenges, Shop, Quests).</summary>
+        /// <summary>Red badge count for the home dock buttons (Rewards, Challenges, Words, Shop, Quests).</summary>
         public int DockBadge(int index)
         {
             switch (index)
             {
                 case 0: return DailyRewards.CanClaim ? 1 : 0;
                 case 1: return Challenges.Claimable;
-                case 3: return Quests.Claimable;
+                case 2: return WordBook.Claimable;
+                case 4: return Quests.Claimable;
                 default: return 0;
             }
         }
@@ -301,8 +306,7 @@ namespace ZWord
         /// <summary>Today's Daily Puzzle (same level for everyone; rewards once a day, replays allowed).</summary>
         public void StartDailyPuzzle()
         {
-            DailyPuzzle.Pick(out int cat, out int lvl);
-            var level = LevelDatabase.Get(cat, lvl) ?? LevelGenerator.Generate(cat, lvl);
+            var level = DailyPuzzle.Build();
             GameScreen.BuildCustom(NewScreen("DailyPuzzle"), level, false, true);
             AudioManager.PlayMusic(MusicContext.Game, nextTrack: true);
         }
@@ -376,5 +380,9 @@ namespace ZWord
         public bool NewBest;
         public bool Daily;      // Daily Puzzle result
         public int Streak;      // Daily Puzzle streak after this solve
+        public int GoldGems;    // gems from the golden hex (already in the wallet)
+        public int NewBookWords;            // words added to the Word Book this level
+        public bool Boss, CrownEarned;      // boss board / first win on it
+        public string BadgeEarned;          // event badge just earned (null if none)
     }
 }

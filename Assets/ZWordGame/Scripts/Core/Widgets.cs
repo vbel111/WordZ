@@ -13,9 +13,9 @@ namespace ZWord
         public static readonly Color CreamShade = Palette.Hex("FBEACB");
         public static readonly Color Ink = Palette.Hex("5B3418");
         public static readonly Color InkSoft = Palette.Hex("9A7550");
-        public static readonly Color Wood = Palette.Hex("F4A21C");      // secondary buttons (gold / amber)
-        public static readonly Color WoodDark = Palette.Hex("C9780A");
-        public static readonly Color Plank = Palette.Hex("F7B12E");
+        public static readonly Color Wood = Palette.Hex("FFC928");      // secondary buttons (logo yellow)
+        public static readonly Color WoodDark = Palette.Hex("D9990B");
+        public static readonly Color Plank = Palette.Hex("FFD447");
         public static readonly Color Green = Palette.Hex("5BC236");
         public static readonly Color Red = Palette.Hex("E5484D");
         public static readonly Color Gold = Palette.Hex("FFC21A");
@@ -167,6 +167,7 @@ namespace ZWord
             var view = root.gameObject.AddComponent<CurrencyChipView>();
             view.Kind = kind;
             view.Text = t;
+            view.Refresh(); // OnEnable ran before Text was set, so show the real balance now
             return root;
         }
 
@@ -370,7 +371,7 @@ namespace ZWord
         /// Full-screen page shown in the popup layer (so it also works on top of a running level):
         /// wood background, leaf corners and the standard header. Back / Escape closes it.
         /// </summary>
-        public static RectTransform FullPanel(string title, Action onClose = null)
+        public static RectTransform FullPanel(string title, Action onClose = null, Action onBack = null)
         {
             var overlay = ZWordApp.I.NewPopup(title, onClose);
             var root = UI.Rect("Page_" + title, overlay).Stretch();
@@ -392,7 +393,7 @@ namespace ZWord
                 Corner(new Vector2(0, 1), new Vector2(1, -1));
                 Corner(new Vector2(1, 1), new Vector2(-1, -1));
             }
-            Header(root, title, null, () => ZWordApp.I.ClosePopups(), gear: false);
+            Header(root, title, null, onBack ?? (() => ZWordApp.I.ClosePopups()), gear: false);
             var cg = root.gameObject.AddComponent<CanvasGroup>();
             Tween.Fade(cg, 0f, 1f, 0.2f);
             return root;
@@ -401,11 +402,14 @@ namespace ZWord
         /// <summary>The shared sky background (gradient, clouds, faint honeycomb) used behind every screen.</summary>
         public static void AppBackground(RectTransform parent)
         {
+            // container runs under the notch / home bar; the image inside keeps its aspect-fill
+            var holder = UI.Rect("SkyHolder", parent).Stretch();
+            SafeAreaBleed.Add(holder);
             var tex = Resources.Load<Texture2D>("UI/app_bg");
-            if (tex == null) { UI.Img(parent, null, Palette.Hex("A9C9F6"), "Sky").rectTransform.Stretch(); return; }
+            if (tex == null) { UI.Img(holder, null, Palette.Hex("A9C9F6"), "Sky").rectTransform.Stretch(); return; }
             var go = new GameObject("Sky", typeof(RectTransform), typeof(RawImage));
             var rt = (RectTransform)go.transform;
-            rt.SetParent(parent, false);
+            rt.SetParent(holder, false);
             rt.Stretch();
             var raw = go.GetComponent<RawImage>();
             raw.texture = tex;
@@ -610,6 +614,15 @@ namespace ZWord
             Tile("W", new Vector2(-280, -150), -10, 3.1f);
             return root;
         }
+
+        /// <summary>Colour icon from Resources/HomeIcons (dock, badges, streak flame...), or the fallback.</summary>
+        public static Sprite HomeIcon(string name, Sprite fallback)
+        {
+            var sp = Resources.Load<Sprite>("HomeIcons/" + name);
+            return sp != null ? sp : fallback;
+        }
+
+        public static string Slug(string name) => name.ToLowerInvariant().Replace(" & ", "_").Replace(' ', '_');
 
         /// <summary>Category icon: themed art, or a white disc with the category's first letter.</summary>
         public static RectTransform CategoryIcon(Transform parent, Category cat, float size)

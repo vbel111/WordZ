@@ -34,11 +34,29 @@ namespace ZWord
 #endif
     }
 
-    /// <summary>Share text with the system share sheet (Android); copies to the clipboard elsewhere.</summary>
+    /// <summary>Opens the system share sheet (iOS / Android); copies to the clipboard in the Editor.</summary>
     public static class Share
     {
+#if UNITY_IOS && !UNITY_EDITOR
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        static extern void _ZWordShareText(string text, string url);
+#endif
+
+        /// <summary>Shares the message plus a link to the game's store page.</summary>
+        public static void App(string message)
+        {
+            string url = GameConfig.StoreUrl;
+#if UNITY_IOS && !UNITY_EDITOR
+            try { _ZWordShareText(message, url); return; } catch { }
+#endif
+            Text(string.IsNullOrEmpty(url) ? message : message + "\n" + url);
+        }
+
         public static void Text(string text)
         {
+#if UNITY_IOS && !UNITY_EDITOR
+            try { _ZWordShareText(text, ""); return; } catch { }
+#endif
 #if UNITY_ANDROID && !UNITY_EDITOR
             try
             {
@@ -90,6 +108,55 @@ namespace ZWord
             var rt = (UnityEngine.RectTransform)transform;
             rt.offsetMin = new UnityEngine.Vector2(rt.offsetMin.x, bottom);
             rt.offsetMax = new UnityEngine.Vector2(rt.offsetMax.x, -top);
+        }
+    }
+
+    /// <summary>
+    /// For backgrounds and dimmers: grows the rect back out over the notch / home-bar insets the SafeAreaFitter
+    /// took away, so art runs edge to edge while buttons stay in the safe area.
+    /// Top-anchored rects move up, bottom-anchored rects move down, stretched rects grow both ways.
+    /// </summary>
+    public class SafeAreaBleed : UnityEngine.MonoBehaviour
+    {
+        SafeAreaFitter fitter;
+        UnityEngine.RectTransform fitterRt, rt;
+        UnityEngine.Vector2 baseMin, baseMax;
+        float lastTop = -1, lastBottom = -1;
+
+        public static void Add(UnityEngine.RectTransform target)
+        {
+            if (target != null && target.GetComponent<SafeAreaBleed>() == null) target.gameObject.AddComponent<SafeAreaBleed>();
+        }
+
+        void Awake()
+        {
+            rt = (UnityEngine.RectTransform)transform;
+        }
+
+        void Start()
+        {
+            baseMin = rt.offsetMin;
+            baseMax = rt.offsetMax;
+            fitter = GetComponentInParent<SafeAreaFitter>();
+            if (fitter != null) fitterRt = (UnityEngine.RectTransform)fitter.transform;
+            Apply();
+        }
+
+        void LateUpdate() => Apply();
+
+        void Apply()
+        {
+            if (fitterRt == null) return;
+            float top = -fitterRt.offsetMax.y, bottom = fitterRt.offsetMin.y;
+            if (UnityEngine.Mathf.Approximately(top, lastTop) && UnityEngine.Mathf.Approximately(bottom, lastBottom)) return;
+            lastTop = top; lastBottom = bottom;
+            bool atTop = rt.anchorMin.y >= 0.999f, atBottom = rt.anchorMax.y <= 0.001f;
+            var min = baseMin; var max = baseMax;
+            if (atTop) { min.y += top; max.y += top; }
+            else if (atBottom) { min.y -= bottom; max.y -= bottom; }
+            else { max.y += top; min.y -= bottom; }
+            rt.offsetMin = min;
+            rt.offsetMax = max;
         }
     }
 }

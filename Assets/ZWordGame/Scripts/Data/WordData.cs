@@ -12,6 +12,26 @@ namespace ZWord
         public string[] Words = new string[0];   // only used by the runtime fallback generator
         public int LevelCount;
 
+        // ---- limited-time events (e.g. HALLOWEEN) ----
+        public bool IsEvent;
+        public System.DateTime EventStart, EventEnd;   // local dates, EventEnd inclusive
+        public string Badge;
+
+        public void SetEvent(string start, string end, string badge)
+        {
+            if (string.IsNullOrEmpty(start) || string.IsNullOrEmpty(end)) return;
+            if (!System.DateTime.TryParseExact(start, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out EventStart)) return;
+            if (!System.DateTime.TryParseExact(end, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out EventEnd)) return;
+            IsEvent = true;
+            Badge = string.IsNullOrEmpty(badge) ? Name : badge;
+        }
+
+        /// <summary>Normal categories are always live; events only between their dates.</summary>
+        public bool Live => !IsEvent || (System.DateTime.Today >= EventStart.Date && System.DateTime.Today <= EventEnd.Date);
+
+        /// <summary>Time left before an event closes (end of its last day).</summary>
+        public System.TimeSpan EventTimeLeft => EventEnd.Date.AddDays(1) - System.DateTime.Now;
+
         /// <summary>From baked levels.</summary>
         public Category(string name, string hex, int group, int cost, int levelCount)
         {
@@ -49,6 +69,17 @@ namespace ZWord
         public static Category[] Categories => LevelDatabase.Loaded ? LevelDatabase.Categories : Fallback;
 
         /// <summary>Levels in a category (all baked categories have 25).</summary>
+        /// <summary>A normal (non-event) category: counts for quests, the Daily Puzzle and PLAY.</summary>
+        public static bool IsRegular(int c) => c >= 0 && c < Categories.Length && !Categories[c].IsEvent;
+
+        /// <summary>Index of the event running today, or -1.</summary>
+        public static int ActiveEvent()
+        {
+            var cats = Categories;
+            for (int c = 0; c < cats.Length; c++) if (cats[c].IsEvent && cats[c].Live) return c;
+            return -1;
+        }
+
         public static int LevelsPerCategory => LevelDatabase.Loaded ? BoardShapes.LevelsPerCategory : FallbackLevels;
 
         static readonly Category[] Fallback =

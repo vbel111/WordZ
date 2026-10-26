@@ -18,6 +18,7 @@ namespace ZWord
             public Hex Hex;
             public RectTransform Root;
             public Image Shadow, Face, Glow;
+            public Image Gold, GoldSpark;   // golden hex decoration (see SetGolden)
             public TMP_Text Letter;
             public bool Locked;
             public Color FaceColor = Palette.Cream, ShadowColor = Palette.CreamShadow, LetterColor = Palette.Brown;
@@ -209,6 +210,8 @@ namespace ZWord
             {
                 var t = tiles[path[i]];
                 t.Locked = true;
+                if (t.Gold) Destroy(t.Gold.gameObject);
+                if (t.GoldSpark) Destroy(t.GoldSpark.gameObject);
                 t.FaceColor = color;
                 t.ShadowColor = Palette.Darken(color, 0.7f);
                 t.LetterColor = Color.white;
@@ -263,6 +266,27 @@ namespace ZWord
                     t.Glow.color = new Color(1f, 0.95f, 0.5f, a * (1f - k * 0.5f));
                 }, null, i * stagger, () => t.Glow.color = new Color(1, 1, 1, 0));
             }
+        }
+
+        /// <summary>Turns a tile into the golden hex: gold rim, warm face and a spinning sparkle.</summary>
+        public void SetGolden(Hex h)
+        {
+            if (!tiles.TryGetValue(h, out var t)) return;
+            var rim = UI.Img(t.Root, Sprites.Hexagon, Palette.Hex("FFC21A"), "GoldRim");
+            rim.rectTransform.Stretch(-12, -20, -12, -8);
+            rim.transform.SetSiblingIndex(1);
+            rim.raycastTarget = false;
+            rim.gameObject.AddComponent<Pulse>().Amount = 0.05f;
+            t.Gold = rim;
+            t.FaceColor = Palette.Hex("FFF3C4");
+            t.ShadowColor = Palette.Hex("E7A51C");
+            t.LetterColor = Palette.Hex("9A5A06");
+            Paint(t, t.FaceColor, t.ShadowColor, t.LetterColor);
+            var spark = UI.Img(t.Root, Sprites.Star, Color.white, "GoldSpark");
+            spark.rectTransform.Place(new Vector2(1, 1), new Vector2(-radius * 0.28f, -radius * 0.22f), Vector2.one * radius * 0.55f);
+            spark.raycastTarget = false;
+            spark.gameObject.AddComponent<Spinner>().Speed = 60f;
+            t.GoldSpark = spark;
         }
 
         public bool CanRotate => level.RotStep > 0;

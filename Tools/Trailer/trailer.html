@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Word Z - The Lost Words (story trailer)</title>
+<style>
+@font-face { font-family: Baloo; src: url(assets/Baloo2-ExtraBold.ttf); font-weight: 800; }
+html, body { margin: 0; background: #000; }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; font-family: Baloo, sans-serif; background: #8ED2F8; }
+.layer { position: absolute; inset: 0; }
+.abs { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+.tile { position: absolute; left: 0; top: 0; }
+.tile .sh, .tile .fc { position: absolute; inset: 0; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
+.tile .gl { position: absolute; left: 16%; right: 16%; top: 6%; height: 40%; clip-path: polygon(15% 0, 85% 0, 100% 100%, 0 100%); background: rgba(255,255,255,0.28); }
+.tile .lt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+.cap { position: absolute; left: 60px; right: 60px; text-align: center; color: #fff; font-weight: 800; line-height: 0.98;
+       -webkit-text-stroke: 16px #4A2410; paint-order: stroke fill; text-shadow: 0 12px 0 #4A2410; }
+.cap .hl { color: #FFD02E; }
+.kick { position: absolute; left: 50%; padding: 12px 46px 16px; border-radius: 26px; background: #FFD02E; border: 6px solid #4A2410;
+        box-shadow: 0 10px 0 #4A2410, inset 0 -9px 0 #E9A80F, inset 0 7px 0 rgba(255,255,255,0.55); color: #4A2410; font-size: 46px; font-weight: 800; letter-spacing: 3px; white-space: nowrap; }
+.eye { position: absolute; background: #fff; border-radius: 50%; border: 5px solid #4A2410; overflow: hidden; }
+.pupil { position: absolute; width: 46%; height: 52%; background: #3A1A08; border-radius: 50%; }
+.rays { position: absolute; width: 1600px; height: 1600px; border-radius: 50%;
+        background: repeating-conic-gradient(rgba(255,240,170,0.55) 0deg 9deg, rgba(255,240,170,0) 9deg 22.5deg); }
+.btn { position: absolute; left: 50%; border-radius: 60px; background: #5BC236; box-shadow: 0 16px 0 #3B8A21, 0 26px 40px rgba(74,36,16,0.35);
+       color: #fff; font-weight: 800; -webkit-text-stroke: 10px #2F6B18; paint-order: stroke fill; text-align: center; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="layer" id="bgSky" style="background: linear-gradient(#173B6E, #3E77B8 55%, #8FC3EA);"></div>
+  <div class="layer" id="bgPano" style="background: url(assets/pano.png) 0 0 / auto 1920px no-repeat;"></div>
+  <div class="layer" id="maps" style="isolation: isolate; z-index: 0;"></div>
+  <div class="layer" id="bgBlur" style="background: url(assets/bg_city.jpg) center / cover; filter: saturate(1.1);"></div>
+  <div class="layer" id="bgSpace" style="background: url(assets/bg_space.jpg) center / cover;"></div>
+  <div class="layer" id="dim" style="background: #1A0A20;"></div>
+  <div class="abs" id="rays" style="left: 540px; top: 960px;"><div class="rays" style="left: -800px; top: -800px;"></div></div>
+  <div class="layer" id="tiles"></div>
+  <div class="abs" id="line" style="left:0;top:0;width:1080px;height:1920px;"><svg width="1080" height="1920" style="position:absolute;inset:0"><polyline id="swipe" fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/></svg></div>
+  <div class="abs" id="finger" style="width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.85); border: 8px solid #4A2410;"></div>
+  <div class="abs" id="hero"></div>
+  <img class="abs" id="crown" src="assets/crown.png" style="width: 230px; height: 230px;">
+  <div class="layer" id="fx"></div>
+  <div class="abs" id="flame" style="width: 420px; height: 150px;">
+    <div style="position:absolute; inset:0; border-radius: 80px; background:#E5484D; border: 10px solid #fff; box-shadow: 0 16px 30px rgba(74,36,16,0.35);"></div>
+    <img src="assets/icon_flame.png" style="position:absolute; left: 6px; top: -10px; width: 150px; height: 150px;">
+    <div style="position:absolute; left: 150px; top: 20px; font-size: 76px; line-height: 1; color: #fff; font-weight: 800;">DAY 7</div>
+  </div>
+  <img class="abs" id="logo" src="assets/logo.png" style="width: 900px; height: 645px;">
+  <div class="layer" id="caps"></div>
+  <div class="abs btn" id="cta" style="width: 640px; height: 170px; margin-left: -320px; font-size: 92px; line-height: 160px;">PLAY FREE</div>
+  <img class="abs" id="icon" src="assets/app_icon.png" style="width: 170px; height: 170px; border-radius: 40px; box-shadow: 0 12px 30px rgba(74,36,16,0.35);">
+  <div class="layer" id="flash" style="background: #fff;"></div>
+</div>
+<script>
+const DATA = window.DATA;            // injected by render.js
+const FPS = 30, DURATION = 28;
+const stage = document.getElementById('stage');
+const $ = id => document.getElementById(id);
+
+// ---------------- easing + timeline helpers ----------------
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, k) => a + (b - a) * k;
+const outCubic = k => 1 - Math.pow(1 - k, 3);
+const inCubic = k => k * k * k;
+const inOut = k => k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+const outBack = (k, s = 1.70158) => 1 + (s + 1) * Math.pow(k - 1, 3) + s * Math.pow(k - 1, 2);
+const spring = k => k <= 0 ? 0 : k >= 1 ? 1 : 1 - Math.exp(-6 * k) * Math.cos(12 * k);
+function rnd(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
+function set(el, x, y, s = 1, r = 0, o = 1, sx = null, sy = null) {
+  el.style.transform = `translate(${x}px, ${y}px) rotate(${r}deg) scale(${sx ?? s}, ${sy ?? s})`;
+  el.style.opacity = o; el.style.display = o <= 0.001 ? 'none' : 'block';
+}
+function vis(el, o) { el.style.opacity = o; el.style.display = o <= 0.001 ? 'none' : 'block'; }
+
+// ---------------- tiles ----------------
+const PAL = { cream: ['#FFFDF8', '#EDBE62', '#5B3418'], yellow: ['#FFD02E', '#E39A12', '#5B3418'], green: ['#4CD137', '#35921F', '#fff'],
+  pink: ['#F46FD8', '#AA4D97', '#fff'], blue: ['#3AA0F5', '#2870AB', '#fff'], orange: ['#FF8A3D', '#B2602A', '#fff'],
+  purple: ['#9B59E6', '#6C3EA1', '#fff'], teal: ['#1FC1B5', '#15877E', '#fff'], gold: ['#FFF3B0', '#E7A51C', '#9A5A06'], red: ['#F2506A', '#A9384A', '#fff'] };
+function makeTile(parent, letter, size) {
+  const el = document.createElement('div'); el.className = 'tile';
+  const w = size * 2 * 0.95, h = size * Math.sqrt(3) * 0.95;
+  el.style.width = w + 'px'; el.style.height = h + 'px'; el.style.marginLeft = -w / 2 + 'px'; el.style.marginTop = -h / 2 + 'px';
+  el.innerHTML = `<div class="sh" style="transform: translateY(${size * 0.13}px)"></div><div class="fc"><div class="gl"></div></div><div class="lt" style="font-size:${size * 0.9}px">${letter}</div>`;
+  parent.appendChild(el); el._size = size; paint(el, 'cream'); return el;
+}
+function paint(el, c) {
+  const p = PAL[c]; if (el._c === c) return; el._c = c;
+  el.children[0].style.background = p[1]; el.children[1].style.background = p[0];
+  const lt = el.children[2]; lt.style.color = p[2];
+  lt.style.webkitTextStroke = p[2] === '#fff' ? `${el._size * 0.07}px #4A2410` : '0'; lt.style.paintOrder = 'stroke fill';
+}
+function hexPos(c, R) { return [R * 1.5 * c[0], R * Math.sqrt(3) * (c[1] + c[0] * 0.5)]; }
+
+// ---------------- hero: the little golden Z ----------------
+const hero = $('hero');
+const heroTile = makeTile(hero, 'Z', 120); paint(heroTile, 'gold');
+heroTile.children[2].style.fontSize = '96px'; heroTile.children[2].style.paddingTop = '58px';
+const eyes = [];
+for (const dx of [-46, 46]) {
+  const e = document.createElement('div'); e.className = 'eye';
+  e.style.width = '62px'; e.style.height = '72px'; e.style.left = (dx - 31) + 'px'; e.style.top = '-88px';
+  const p = document.createElement('div'); p.className = 'pupil'; e.appendChild(p); hero.appendChild(e); eyes.push([e, p]);
+}
+const cheek = document.createElement('div');
+cheek.style.cssText = 'position:absolute;left:-80px;top:-20px;width:160px;height:20px;';
+cheek.innerHTML = '<div style="position:absolute;left:0;width:30px;height:18px;border-radius:50%;background:#FF9AA8;opacity:.8"></div><div style="position:absolute;right:0;width:30px;height:18px;border-radius:50%;background:#FF9AA8;opacity:.8"></div>';
+hero.appendChild(cheek);
+function heroFace(look = 0, blink = 0, worry = 0) {
+  for (const [e, p] of eyes) {
+    e.style.transform = `scaleY(${1 - 0.92 * blink})`;
+    p.style.left = (27 + look * 24) + '%'; p.style.top = (30 + worry * 14) + '%';
+  }
+}
+
+// ---------------- scene 1: the word that flies apart ----------------
+const tilesLayer = $('tiles');
+const word1 = 'WORDS'.split('').map((l, i) => { const t = makeTile(tilesLayer, l, 112); paint(t, ['green', 'pink', 'blue', 'orange', 'purple'][i]); return t; });
+
+// floating lost letters seen far away in scene 2
+const lost = 'WORDS'.split('').map((l, i) => { const t = makeTile(tilesLayer, l, 46); paint(t, ['green', 'pink', 'blue', 'orange', 'purple'][i]); return t; });
+
+// ---------------- scene 3: a real City board (THEATER, HOUSE, SHOP, BUS) ----------------
+const B = DATA.board, BR = 104;
+const boardTiles = B.cells.map((c, i) => makeTile(tilesLayer, B.letters[i], BR));
+const bpos = B.cells.map(c => hexPos(c, BR));
+const bcx = (Math.min(...bpos.map(p => p[0])) + Math.max(...bpos.map(p => p[0]))) / 2;
+const bcy = (Math.min(...bpos.map(p => p[1])) + Math.max(...bpos.map(p => p[1]))) / 2;
+const BOARD_X = 540, BOARD_Y = 1050;
+const wordColor = { THEATER: 'pink', HOUSE: 'green', SHOP: 'blue', BUS: 'orange' };
+const house = B.words.find(w => w.w === 'HOUSE');
+
+// ---------------- scene 5: the 37-tile boss ----------------
+const X = DATA.boss, XR = 64;
+const bossTiles = X.cells.map((c, i) => makeTile(tilesLayer, X.letters[i], XR));
+const xpos = X.cells.map(c => hexPos(c, XR));
+const bossColors = ['pink', 'green', 'blue', 'orange', 'purple', 'teal'];
+const bossCol = new Array(37).fill('cream'); const bossOrder = new Array(37).fill(0);
+X.words.forEach((w, wi) => w.p.forEach((ci, k) => { bossCol[ci] = bossColors[wi % 6]; bossOrder[ci] = wi * 0.32 + k * 0.03; }));
+
+// ---------------- maps for the journey ----------------
+const mapsLayer = $('maps');
+const MAPS = ['map_city', 'map_ocean', 'map_space', 'map_halloween'];
+const mapEls = MAPS.map(n => { const d = document.createElement('div'); d.className = 'abs';
+  d.style.cssText += `width:1080px;height:2400px;background:url(assets/${n}.jpg) center/cover;`; mapsLayer.appendChild(d); return d; });
+
+// ---------------- captions ----------------
+const capsLayer = $('caps');
+function cap(html, size, y) { const d = document.createElement('div'); d.className = 'cap'; d.innerHTML = html; d.style.fontSize = size + 'px';
+  d.style.top = y + 'px'; capsLayer.appendChild(d); return d; }
+function kick(text, y) { const d = document.createElement('div'); d.className = 'kick'; d.textContent = text; d.style.top = y + 'px'; capsLayer.appendChild(d); return d; }
+const C = {
+  oh: cap('OH NO!', 190, 300),
+  flew: cap('THE WORDS<br><span class="hl">FLEW AWAY!</span>', 120, 520),
+  z: cap('LITTLE <span class="hl">Z</span><br>TO THE RESCUE', 120, 300),
+  swipe: cap('SWIPE TO<br><span class="hl">FIND WORDS</span>', 128, 270),
+  great: cap('<span class="hl">GREAT!</span>', 150, 1540),
+  levels: cap('<span class="hl" id="count">1,000</span><br>WORD PUZZLES', 130, 270),
+  worlds: kick('20 THEMED WORLDS', 560),
+  boss: cap('<span class="hl">BOSS</span><br>BOARD!', 190, 260),
+  win: cap('WORDS<br><span class="hl">SAVED!</span>', 150, 250),
+  noads: kick('NO ADS. JUST WORDS.', 940)
+};
+const countEl = document.getElementById('count');
+
+// ---------------- particles (sparkles, coins, gems) ----------------
+const fx = $('fx');
+const sparks = [];
+const R0 = rnd(42);
+for (let i = 0; i < 60; i++) {
+  const img = document.createElement('img'); img.className = 'abs';
+  img.src = 'assets/' + ['star.png', 'gem.png', 'coin.png'][i % 3]; img.style.width = img.style.height = (50 + R0() * 60) + 'px';
+  fx.appendChild(img); sparks.push({ el: img, a: R0() * Math.PI * 2, v: 500 + R0() * 900, spin: (R0() - 0.5) * 720, d: R0() * 0.25 });
+}
+function burst(t, t0, cx, cy, n = 60, life = 1.3) {
+  sparks.forEach((p, i) => {
+    if (i >= n) { vis(p.el, 0); return; }
+    const k = (t - t0 - p.d) / life;
+    if (k < 0 || k > 1) { vis(p.el, 0); return; }
+    const e = outCubic(k), x = cx + Math.cos(p.a) * p.v * e, y = cy + Math.sin(p.a) * p.v * e + 900 * k * k;
+    set(p.el, x - 40, y - 40, 0.6 + 0.6 * (1 - k), p.spin * k, 1 - inCubic(k));
+  });
+}
+
+// ================== render(t) ==================
+function render(t) {
+  // ---- background layers ----
+  const s1 = seg(t, 0, 3.6), s2 = seg(t, 3.6, 7.6), s3 = seg(t, 7.6, 14), s4 = seg(t, 14, 20.2), s5 = seg(t, 20.2, 24.4), s6 = seg(t, 24.4, 28);
+  // sky: night-ish during the hook, brightens as Z falls
+  vis($('bgSky'), t < 4.4 ? 1 : 0);
+  vis($('bgPano'), t < 4.2 ? 1 - seg(t, 3.4, 4.2) : t >= 24.2 ? seg(t, 24.4, 24.8) : 0);
+  $('bgPano').style.backgroundPosition = `${-200 - t * 60}px 0`;
+  // maps: city falls in during scene 2, journey scrolls through 4 worlds in scene 4
+  if (t >= 3.6 && t < 7.9) {
+    const k = inOut(seg(t, 3.6, 4.6));
+    mapEls.forEach((m, i) => vis(m, i === 0 ? 1 : 0));
+    set(mapEls[0], 0, lerp(1920, -380, k) - 40 * seg(t, 4.6, 7.6), 1);
+  } else if (t >= 14 && t < 20.4) {
+    const D = 1.55;                                  // each world: slides in (0.45 s), then drifts upward
+    mapEls.forEach((m, i) => {
+      const a = 14 + i * D;
+      if (t < a - 0.01 || t > a + D + 0.5) { vis(m, 0); return; }
+      const inK = i === 0 ? 1 : inOut(seg(t, a, a + 0.45));
+      const drift = 260 * seg(t, a, a + D + 0.5);
+      set(m, 0, lerp(1920, -240, inK) - drift, 1, 0, 1);
+      m.style.zIndex = i;
+    });
+  } else mapEls.forEach(m => vis(m, 0));
+  vis($('bgBlur'), t >= 7.4 && t < 14.2 ? Math.min(seg(t, 7.4, 7.9), 1 - seg(t, 13.9, 14.2)) : 0);
+  $('bgBlur').style.filter = `blur(${lerp(0, 6, seg(t, 7.4, 8.2))}px) saturate(1.1)`;
+  vis($('bgSpace'), t >= 20.1 && t < 24.6 ? Math.min(seg(t, 20.1, 20.5), 1 - seg(t, 24.3, 24.6)) : 0);
+  vis($('dim'), t < 3.6 ? 0.3 + 0.15 * seg(t, 1.3, 2.0) : t >= 20.2 && t < 24.4 ? 0.35 * Math.sin(Math.PI * seg(t, 20.2, 24.4)) : 0);
+  const shake = (t > 20.4 && t < 21.4) ? Math.sin(t * 90) * 14 * (1 - seg(t, 20.4, 21.4)) : (t > 1.2 && t < 1.5) ? Math.sin(t * 120) * 10 : 0;
+  stage.style.transform = `translate(${shake}px, ${shake * 0.6}px)`;
+
+  // ---- scene 1: WORDS trembles, Z joins, then the letters fly away ----
+  word1.forEach((tl, i) => {
+    const x0 = 540 + (i - 2) * 200, y0 = 980;
+    if (t > 3.8) { vis(tl, 0); return; }
+    const appear = outBack(seg(t, 0.05 + i * 0.06, 0.45 + i * 0.06));
+    const tremble = t > 0.7 && t < 1.3 ? Math.sin(t * 70 + i) * 6 * seg(t, 0.7, 1.2) : 0;
+    const fly = seg(t, 1.3 + i * 0.05, 2.6 + i * 0.05);
+    const dir = (i - 2) * 1.0;
+    const x = x0 + tremble + dir * 260 * outCubic(fly) + (i % 2 ? 120 : -80) * fly;
+    const y = y0 - 1500 * inCubic(fly) * 1.1 - 260 * outCubic(fly);
+    set(tl, x, y, appear * (1 - 0.4 * fly), (i - 2) * 220 * fly + tremble, 1 - seg(fly, 0.8, 1));
+  });
+  // hero Z: pops in under the word, gets left behind, then falls into the world
+  {
+    let x = 540, y = 1360, sx = 1, sy = 1, o = 0, r = 0, look = 0, blink = 0, worry = 0;
+    if (t < 3.6) {
+      o = seg(t, 0.3, 0.5); const pop = outBack(seg(t, 0.3, 0.7));
+      sx = sy = pop; look = t > 1.3 ? clamp((t - 1.3) * 2) * -0.6 + Math.sin(t * 6) * 0.3 * seg(t, 2.2, 3) : 0;
+      worry = seg(t, 1.4, 1.8);
+      y = 1360 - 30 * Math.sin(Math.PI * seg(t, 1.3, 1.6));
+      blink = (t > 2.6 && t < 2.75) ? 1 : 0;
+    } else if (t < 7.6) {
+      // falls from the sky onto the City map path, squashes on landing, looks around
+      const f = seg(t, 3.6, 4.6);
+      o = 1; y = lerp(-200, 1480, inCubic(f)); r = (1 - f) * 25;
+      const land = seg(t, 4.6, 5.0);
+      if (t >= 4.6) { const sq = Math.sin(Math.PI * land) * 0.28; sx = 1 + sq; sy = 1 - sq; y = 1480 + 40 * sq; }
+      look = t > 5.2 ? Math.sin((t - 5.2) * 3.2) : 0; blink = (t > 5.6 && t < 5.72) || (t > 6.9 && t < 7.02) ? 1 : 0;
+      x = 540 + (t > 6.2 ? 0 : 0);
+      if (t > 7.1) { const j = seg(t, 7.1, 7.6); y = 1480 - 900 * outCubic(j); sx = 1 - 0.1 * j; sy = 1 + 0.15 * j; o = 1 - seg(t, 7.4, 7.6); }
+    } else if (t < 14) {
+      // sits on the edge of the board and cheers when the word is found
+      o = seg(t, 8.6, 9.0); x = 200; y = 1690; sx = sy = 0.75 * outBack(seg(t, 8.6, 9.0));
+      const cheer = seg(t, 11.0, 11.5); y -= 80 * Math.sin(Math.PI * cheer); look = 0.6;
+      blink = (t > 12.6 && t < 12.72) ? 1 : 0;
+    } else if (t < 20.2) {
+      // hops along the journey path through the worlds
+      o = 1; const hop = (t - 14) * 2.2; const ph = hop % 1;
+      x = 540 + Math.sin(hop * 0.9) * 140; y = 1500 - 160 * Math.sin(Math.PI * ph);
+      const sq = ph < 0.12 ? (0.12 - ph) * 2.2 : 0; sx = 0.9 + sq; sy = 0.9 - sq; look = Math.cos(hop * 0.9) * 0.6;
+    } else if (t < 24.4) {
+      o = 1; x = 540; const up = outBack(seg(t, 22.6, 23.1)); y = lerp(1700, 1530, up);
+      sx = sy = 0.9 + 0.15 * up; worry = 1 - seg(t, 22.4, 22.8); blink = (t > 21.2 && t < 21.32) ? 1 : 0;
+      if (t > 23.3) { const j = Math.sin(Math.PI * seg(t, 23.3, 23.7)); y -= 60 * j; }
+    } else {
+      o = 1; const k = outBack(seg(t, 25.2, 25.7)); x = lerp(1300, 820, k); y = 1640; sx = sy = 0.85;
+      look = -0.5; blink = (t > 26.6 && t < 26.72) ? 1 : 0;
+    }
+    set(hero, x, y, 1, r, o, sx, sy); heroFace(look, blink, worry);
+  }
+  // crown: drops onto Z after the boss, stays for the end card
+  {
+    const c = $('crown');
+    if (t < 23.1) vis(c, 0);
+    else if (t < 24.4) { const k = seg(t, 23.1, 23.6); const hx = 540, hy = lerp(1700, 1530, 1) - 60 * Math.sin(Math.PI * seg(t, 23.3, 23.7));
+      set(c, hx - 115, lerp(-300, hy - 330, outBack(k)), 1, lerp(-30, -8, k), 1); }
+    else { const k = outBack(seg(t, 25.2, 25.7)); set(c, lerp(1300, 820, k) - 115, 1640 - 300, 0.85, -8, 1); }
+  }
+  // lost letters drifting far away above the City
+  lost.forEach((tl, i) => {
+    const o = t > 4.8 && t < 7.7 ? Math.min(seg(t, 4.8, 5.4), 1 - seg(t, 7.3, 7.7)) : 0;
+    const x = 200 + i * 170 + Math.sin(t * 1.5 + i) * 30, y = 780 + Math.cos(t * 1.2 + i * 2) * 40 - (i % 2) * 70;
+    set(tl, x, y, 1, Math.sin(t * 2 + i) * 15, o);
+  });
+
+  // ---- scene 3: board assembles, swipe HOUSE, then every word lights up ----
+  boardTiles.forEach((tl, i) => {
+    if (t < 7.7 || t > 14.3) { vis(tl, 0); return; }
+    const [px, py] = bpos[i];
+    const tx = BOARD_X + px - bcx, ty = BOARD_Y + py - bcy;
+    const a = seg(t, 7.7 + i * 0.035, 8.25 + i * 0.035);
+    const fromX = 540 + (tx - 540) * 3.2, fromY = -300 - i * 40;
+    const out = seg(t, 13.7 + i * 0.015, 14.2 + i * 0.015);
+    let x = lerp(fromX, tx, outCubic(a)), y = lerp(fromY, ty, outBack(a, 1.2)) - 1300 * inCubic(out);
+    let s = 1, c = 'cream';
+    const hk = house.p.indexOf(i);
+    if (hk >= 0 && t >= 9.4 + hk * 0.32 && t < 11.0) { c = 'yellow'; s = 1 + 0.14 * Math.sin(Math.PI * seg(t, 9.4 + hk * 0.32, 9.65 + hk * 0.32)); }
+    for (const w of B.words) {
+      const k = w.p.indexOf(i); if (k < 0) continue;
+      const tw = w.w === 'HOUSE' ? 11.0 : 11.9 + ['THEATER', 'SHOP', 'BUS'].indexOf(w.w) * 0.45;
+      if (t >= tw + k * 0.05) { c = wordColor[w.w]; s = Math.max(s, 1 + 0.18 * Math.sin(Math.PI * seg(t, tw + k * 0.05, tw + k * 0.05 + 0.3))); }
+    }
+    paint(tl, c);
+    set(tl, x, y, s, 0, a > 0 ? 1 : 0);
+  });
+  // swipe line + finger along H-O-U-S-E
+  {
+    const pts = house.p.map(i => [BOARD_X + bpos[i][0] - bcx, BOARD_Y + bpos[i][1] - bcy]);
+    const k = seg(t, 9.25, 10.85) * (pts.length - 1);
+    const shown = [];
+    for (let j = 0; j <= Math.floor(k) && j < pts.length; j++) shown.push(pts[j]);
+    if (k < pts.length - 1) { const j = Math.floor(k), f = k - j; shown.push([lerp(pts[j][0], pts[j + 1][0], f), lerp(pts[j][1], pts[j + 1][1], f)]); }
+    const on = t > 9.1 && t < 11.0;
+    $('swipe').setAttribute('points', on ? shown.map(p => p.join(',')).join(' ') : '');
+    const tip = shown[shown.length - 1] || pts[0];
+    const fo = t > 8.9 && t < 11.3 ? Math.min(seg(t, 8.9, 9.2), 1 - seg(t, 11.0, 11.3)) : 0;
+    set($('finger'), tip[0] - 60 + 40, tip[1] - 60 + 60, t > 9.2 && t < 9.3 ? 0.85 : 1, 0, fo);
+  }
+
+  // ---- scene 5: boss board spirals in, fills, bursts ----
+  bossTiles.forEach((tl, i) => {
+    if (t < 20.6 || t > 24.6) { vis(tl, 0); return; }
+    const [px, py] = xpos[i];
+    const ring = Math.max(Math.abs(X.cells[i][0]), Math.abs(X.cells[i][1]), Math.abs(-X.cells[i][0] - X.cells[i][1]));
+    const a = seg(t, 20.7 + ring * 0.16 + (i % 6) * 0.02, 21.2 + ring * 0.16 + (i % 6) * 0.02);
+    const ang = Math.atan2(py, px) + (1 - a) * 2.4;
+    const dist = Math.hypot(px, py) + (1 - outCubic(a)) * 900;
+    const x = 540 + Math.cos(ang) * dist, y = 1010 + Math.sin(ang) * dist;
+    const fillT = 21.9 + bossOrder[i] * 0.55;
+    paint(tl, t >= 23.0 ? 'gold' : t >= fillT ? bossCol[i] : 'cream');
+    const pop = t >= fillT ? 1 + 0.16 * Math.sin(Math.PI * seg(t, fillT, fillT + 0.25)) : 1;
+    const away = seg(t, 24.1, 24.6);
+    set(tl, x, y - 1600 * inCubic(away), outBack(a) * pop, 0, a > 0 ? 1 - away : 0);
+  });
+  const raysO = t > 22.9 && t < 24.6 ? Math.min(seg(t, 22.9, 23.2), 1 - seg(t, 24.2, 24.6)) : t > 24.8 ? 0.5 * seg(t, 24.8, 25.4) : 0;
+  set($('rays'), t > 24.6 ? 0 : 0, t > 24.6 ? -100 : 0, t > 24.6 ? 1.1 : 1, t * 18, raysO);
+  if (t > 22.95 && t < 24.4) burst(t, 22.95, 540, 1010, 60, 1.4);
+  else if (t > 11.0 && t < 12.6) burst(t, 11.0, BOARD_X, BOARD_Y, 24, 1.2);
+  else sparks.forEach(p => vis(p.el, 0));
+  vis($('flash'), t > 22.95 && t < 23.25 ? 0.8 * (1 - seg(t, 22.95, 23.25)) : 0);
+
+  // ---- streak flame during the journey ----
+  {
+    const k = outBack(seg(t, 17.2, 17.6)); const o = t > 17.2 && t < 20.1 ? 1 - seg(t, 19.8, 20.1) : 0;
+    set($('flame'), 330, 820, k, -6 + Math.sin(t * 4) * 2, o);
+  }
+
+  // ---- end card ----
+  {
+    const k = outBack(seg(t, 24.6, 25.2), 1.4);
+    set($('logo'), 90, lerp(-700, 210, k), 1, 0, t > 24.6 ? 1 : 0);
+    const pulse = 1 + 0.04 * Math.sin((t - 26) * 6);
+    set($('cta'), 0, 1120, outBack(seg(t, 26.0, 26.4)) * (t > 26.4 ? pulse : 1), 0, t > 26 ? 1 : 0);
+    vis($('icon'), 0);
+  }
+
+  // ---- captions (kinetic type: in with overshoot, hold, out) ----
+  function showCap(el, a, b, mode = 'pop') {
+    if (t < a || t > b) { vis(el, 0); return; }
+    const i = seg(t, a, a + 0.35), o = seg(t, b - 0.25, b);
+    const s = mode === 'slam' ? lerp(2.4, 1, outCubic(i)) : outBack(i);
+    el.style.transform = `translateY(${-60 * o}px) scale(${s})`; vis(el, 1 - o);
+  }
+  showCap(C.oh, 1.35, 3.5, 'slam');
+  showCap(C.flew, 1.75, 3.5);
+  showCap(C.z, 4.9, 7.4);
+  showCap(C.swipe, 8.3, 13.8);
+  showCap(C.great, 11.05, 12.2);
+  showCap(C.levels, 14.3, 20.0);
+  showCap(C.worlds, 14.8, 20.0);
+  if (t >= 14.3 && t <= 20) countEl.textContent = Math.round(lerp(1, 1000, outCubic(seg(t, 14.4, 16.4)))).toLocaleString('en-US');
+  showCap(C.boss, 20.4, 22.4, 'slam');
+  showCap(C.win, 23.1, 24.3);
+  showCap(C.noads, 25.4, 28.1);
+  C.worlds.style.marginLeft = -C.worlds.offsetWidth / 2 + 'px';
+  C.noads.style.marginLeft = -C.noads.offsetWidth / 2 + 'px';
+
+  // global fade out of the last frames (loop-friendly)
+  stage.style.opacity = 1 - 0.0 * seg(t, 27.6, 28);
+}
+window.render = render;
+window.TRAILER = { FPS, DURATION };
+render(0);
+</script>
+</body>
+</html>

@@ -40,6 +40,7 @@ namespace ZWord
             if (!CanClaim) return (0, 0);
             int day = NextDay;
             int coins = GameConfig.DailyCoins[day], gems = GameConfig.DailyGems[day];
+            if (Store.IsPro) coins *= GameConfig.ProDailyMultiplier;
             var d = Save.Data;
             d.dailyDay = (day + 1) % 7;
             d.dailyLastClaim = Day.Today;
@@ -174,14 +175,91 @@ namespace ZWord
             return seed & 0x7fffffff;
         }
 
-        /// <summary>Today's level: any category (locked ones too), from the middle of its difficulty curve.</summary>
+        /// <summary>Today's category (any normal one, locked ones too) and a fallback level from the middle of its curve.</summary>
         public static void Pick(out int cat, out int lvl)
         {
             var rng = new Random(Seed());
-            cat = rng.Next(WordData.Categories.Length);
+            var regular = Enumerable.Range(0, WordData.Categories.Length).Where(WordData.IsRegular).ToList();
+            cat = regular.Count > 0 ? regular[rng.Next(regular.Count)] : 0;
             int count = Math.Max(1, WordData.Categories[cat].LevelCount);
             int lo = Math.Min(count - 1, count / 4), hi = Math.Max(lo + 1, count * 4 / 5);
             lvl = rng.Next(lo, hi);
+        }
+
+        static string builtFor;
+        static Level built;
+
+        /// <summary>
+        /// Today's board: a brand-new honeycomb (23 tiles on weekdays, 27 at the weekend) dealt from the category's
+        /// words with the date as seed, so every player gets the same puzzle and it is never a copy of a map level.
+        /// </summary>
+        public static Level Build()
+        {
+            if (builtFor == Day.Today && built != null) return Fresh(built);
+            Pick(out int cat, out int lvl);
+            Level level = null;
+            try { level = Generate(cat, lvl); }
+            catch (Exception e) { UnityEngine.Debug.LogWarning("[ZWord] Daily board: " + e.Message); }
+            if (level == null) level = LevelDatabase.Get(cat, lvl) ?? LevelGenerator.Generate(cat, lvl);
+            builtFor = Day.Today;
+            built = level;
+            return Fresh(level);
+        }
+
+        /// <summary>A clean copy (a replay must not start with the previous attempt's found words).</summary>
+        static Level Fresh(Level src)
+        {
+            var l = new Level { CategoryIndex = src.CategoryIndex, LevelIndex = src.LevelIndex, Cells = new System.Collections.Generic.List<Hex>(src.Cells),
+                                TimeLimit = src.TimeLimit, RotStep = src.RotStep };
+            foreach (var kv in src.Letters) l.Letters[kv.Key] = kv.Value;
+            foreach (var w in src.Words)
+                l.Words.Add(new PlacedWord { Word = w.Word, Path = new System.Collections.Generic.List<Hex>(w.Path), Color = w.Color });
+            return l;
+        }
+
+        static Level Generate(int cat, int lvl)
+        {
+            var pool = LevelDatabase.WordsIn(cat).Where(w => w.Length >= 3 && w.Length <= 8).ToList();
+            if (pool.Count < 8) return null;
+            var rng = new Random(Seed() ^ 0x2F6E2B1);
+            var dow = DateTime.Today.DayOfWeek;
+            var cols = dow == DayOfWeek.Saturday || dow == DayOfWeek.Sunday ? BoardShapes.S27 : BoardShapes.S23;
+            var cells = BoardShapes.Cells(cols);
+            for (int attempt = 0; attempt < 60; attempt++)
+            {
+                var cand = pool.OrderBy(_ => rng.Next()).ToList();
+                var chosen = new System.Collections.Generic.List<string>();
+                if (!PickWords(cand, 0, cells.Count, 4, 6, chosen)) continue;
+                chosen = chosen.OrderByDescending(w => w.Length).ToList();
+                var paths = LevelGenerator.Tile(cells, chosen.Select(w => w.Length).ToList(), rng);
+                if (paths == null) continue;
+                var level = new Level { CategoryIndex = cat, LevelIndex = lvl, Cells = cells, TimeLimit = BoardShapes.TimeFor(cells.Count),
+                                        RotStep = BoardShapes.RotationStep(cells) };
+                for (int i = 0; i < chosen.Count; i++)
+                {
+                    var pw = new PlacedWord { Word = chosen[i], Path = paths[i], Color = Palette.WordColors[i % Palette.WordColors.Length] };
+                    for (int k = 0; k < pw.Path.Count; k++) level.Letters[pw.Path[k]] = pw.Word[k];
+                    level.Words.Add(pw);
+                }
+                return level;
+            }
+            return null;
+        }
+
+        static bool PickWords(System.Collections.Generic.List<string> cand, int start, int remaining, int minW, int maxW, System.Collections.Generic.List<string> chosen)
+        {
+            if (remaining == 0) return chosen.Count >= minW;
+            if (chosen.Count >= maxW || remaining < 4) return false;
+            for (int i = start; i < cand.Count; i++)
+            {
+                var w = cand[i];
+                if (w.Length < 4 || w.Length > remaining) continue;
+                if (chosen.Any(x => x.Contains(w) || w.Contains(x))) continue;
+                chosen.Add(w);
+                if (PickWords(cand, i + 1, remaining - w.Length, minW, maxW, chosen)) return true;
+                chosen.RemoveAt(chosen.Count - 1);
+            }
+            return false;
         }
 
         public static bool DoneToday => Save.Data.dailyPuzzleDate == Day.Today;
@@ -244,20 +322,23 @@ namespace ZWord
             new Def("Reach a {0}-day Daily Puzzle streak", () => Save.Data.dailyPuzzleBestStreak, 3, 7, 14, 30),
             new Def("Claim {0} daily rewards", () => Save.Data.dailyClaims, 7, 30, 100, 365),
             new Def("Finish {0} daily challenges", () => Save.Data.challengesClaimed, 10, 50, 150, 500),
+            new Def("Beat {0} boss boards", () => Save.Data.bossWins, 1, 3, 8, 15, 20),
+            new Def("Collect {0} words in your Word Book", () => WordBook.TotalFound, 100, 300, 700, 1200),
+            new Def("Find {0} golden hexes", () => Save.Data.goldenHexes, 3, 15, 50, 150),
         };
 
         static int CompletedCategories()
         {
             int n = 0;
             var cats = WordData.Categories;
-            for (int c = 0; c < cats.Length; c++) if (Save.Completed(c) >= cats[c].LevelCount) n++;
+            for (int c = 0; c < cats.Length; c++) if (!cats[c].IsEvent && Save.Completed(c) >= cats[c].LevelCount) n++;
             return n;
         }
 
         static int UnlockedCount()
         {
             int n = 0;
-            for (int c = 0; c < WordData.Categories.Length; c++) if (Save.Unlocked(c)) n++;
+            for (int c = 0; c < WordData.Categories.Length; c++) if (WordData.IsRegular(c) && Save.Unlocked(c)) n++;
             return n;
         }
 

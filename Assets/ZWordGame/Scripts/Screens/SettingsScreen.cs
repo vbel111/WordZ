@@ -29,8 +29,8 @@ namespace ZWord
             ((RectTransform)edit.transform).Place(new Vector2(1, 0.5f), new Vector2(-70, 0), new Vector2(76, 76));
 
             // ---- switches ----
-            var toggles = Widgets.Card(root, new Vector2(900, 432));
-            toggles.Place(new Vector2(0.5f, 1), new Vector2(0, -656), new Vector2(900, 432));
+            var toggles = Widgets.Card(root, new Vector2(900, 534));
+            toggles.Place(new Vector2(0.5f, 1), new Vector2(0, -707), new Vector2(900, 534));
             SwitchRow(toggles, Sprites.SpeakerGlyph, Skin.Blue, "Sound Effects", -62, Save.Data.sfxOn, v =>
             {
                 Save.Data.sfxOn = v;
@@ -49,28 +49,50 @@ namespace ZWord
                 if (v) Haptics.Medium();
             });
             Widgets.Divider(toggles, -316);
-            SwitchRow(toggles, Sprites.Clock, Palette.Hex("F59B23"), "Relax Mode (no timer)", -368, Save.Data.relaxMode, v =>
+            SwitchRow(toggles, Sprites.Clock, Skin.Gold, "Relax Mode (no timer)", -368, Save.Data.relaxMode, v =>
             {
                 Save.Data.relaxMode = v;
                 Save.Write();
                 if (v) ZWordApp.Toast(root, "NO TIMER - USE FEWER HINTS FOR 3 STARS", new Vector2(0, -260), Palette.Yellow);
             });
+            Widgets.Divider(toggles, -418);
+            // opt-in daily reminder (asks the system for permission when switched on)
+            SwitchRow(toggles, Widgets.HomeIcon("icon_bell", Sprites.CalendarGlyph), Skin.Red, "Daily Reminder", -470, Save.Data.remindersOn, v =>
+            {
+                if (!v) { Reminders.Disable(); return; }
+                Reminders.Enable(ok =>
+                {
+                    if (!ok) ZWordApp.Toast(root, "ALLOW NOTIFICATIONS IN YOUR PHONE SETTINGS", new Vector2(0, -260), Palette.Yellow);
+                    else ZWordApp.Toast(root, "REMINDERS ON!", new Vector2(0, -260), Palette.Hex("7CF06B"));
+                });
+            });
 
             // ---- links ----
-            var links = Widgets.Card(root, new Vector2(900, 430));
-            links.Place(new Vector2(0.5f, 1), new Vector2(0, -1125), new Vector2(900, 430));
+            float linksH = GameConfig.ProEnabled ? 532 : 430;
+            var links = Widgets.Card(root, new Vector2(900, linksH));
+            links.Place(new Vector2(0.5f, 1), new Vector2(0, -1012 - linksH / 2), new Vector2(900, linksH));
             LinkRow(links, Sprites.Play, Skin.Blue, "How to Play", null, -62, () =>
             {
                 ZWordApp.I.ClosePopups();
                 ZWordApp.I.StartTutorial();
             });
             Widgets.Divider(links, -112);
-            LinkRow(links, null, Palette.Hex("F59B23"), "Help & Support", null, -164,
+            LinkRow(links, null, Skin.Gold, "Help & Support", null, -164,
                 () => Application.OpenURL("mailto:" + GameConfig.SupportEmail + "?subject=" + System.Uri.EscapeDataString(GameConfig.GameName + " support (ID " + Save.Data.playerId + ")")), "?");
             Widgets.Divider(links, -214);
             LinkRow(links, Sprites.LockGlyph, Palette.Hex("4F5D7E"), "Privacy Policy", null, -266, () => Application.OpenURL(GameConfig.PrivacyUrl));
             Widgets.Divider(links, -316);
             LinkRow(links, null, Skin.Green, "About", null, -368, ShowAbout, "i");
+            if (GameConfig.ProEnabled)
+            {
+            Widgets.Divider(links, -418);
+            // Word Z Pro: paywall when not subscribed, RevenueCat Customer Center (manage / cancel / refund) when Pro
+            LinkRow(links, Sprites.Star, Skin.Gold, Store.IsPro ? "Manage Word Z Pro" : "Word Z Pro", Store.IsPro ? "ACTIVE" : null, -470, () =>
+                Store.OpenPro(msg =>
+                {
+                    if (msg != null) ZWordApp.Toast(root, msg, new Vector2(0, -260), Palette.Hex("7CF06B"));
+                }));
+            }
 
             // ---- reset (becomes Sign Out once accounts arrive in M5) ----
             bool armed = false;

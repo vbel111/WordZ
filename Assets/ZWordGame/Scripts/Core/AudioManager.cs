@@ -103,7 +103,7 @@ namespace ZWord
             if (I == null) return;
             if (ctx == I.context && !nextTrack) return;
             var list = ctx == MusicContext.Home ? Theme.Current.homeMusic
-                     : ctx == MusicContext.Game ? Theme.Current.gameMusic : null;
+                     : ctx == MusicContext.Game ? GameTracks() : null;
             if (ctx != I.context) I.playlistIndex = -1;
             I.context = ctx;
 
@@ -116,6 +116,22 @@ namespace ZWord
                 clip = list[idx];
             }
             I.CrossfadeTo(clip, 0.8f);
+        }
+
+        static AudioClip[] gameTracks;
+
+        /// <summary>
+        /// Level music: the Word Z originals in Resources/Music/Game (Garden Stroll, Lo-fi Leaves, Honey Breeze),
+        /// a different one each level. Falls back to the Theme's game playlist if the folder is empty.
+        /// </summary>
+        static AudioClip[] GameTracks()
+        {
+            if (gameTracks == null || gameTracks.Length == 0)
+            {
+                gameTracks = Resources.LoadAll<AudioClip>("Music/Game");
+                if (gameTracks.Length == 0) return Theme.Current.gameMusic;
+            }
+            return gameTracks;
         }
 
         void CrossfadeTo(AudioClip clip, float seconds)

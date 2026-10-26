@@ -7,7 +7,7 @@ namespace ZWord
         {
             var cats = WordData.Categories;
             int last = Save.Data.lastCategory;
-            if (last >= 0 && last < cats.Length && Save.Unlocked(last) && Save.Completed(last) < cats[last].LevelCount)
+            if (WordData.IsRegular(last) && Save.Unlocked(last) && Save.Completed(last) < cats[last].LevelCount)
             {
                 cat = last;
                 lvl = Save.Completed(last);
@@ -15,7 +15,7 @@ namespace ZWord
             }
             for (int c = 0; c < cats.Length; c++)
             {
-                if (Save.Unlocked(c) && Save.Completed(c) < cats[c].LevelCount)
+                if (WordData.IsRegular(c) && Save.Unlocked(c) && Save.Completed(c) < cats[c].LevelCount)
                 {
                     cat = c;
                     lvl = Save.Completed(c);
@@ -23,7 +23,7 @@ namespace ZWord
                 }
             }
             // everything unlocked is finished: replay the last level of the last category
-            cat = last >= 0 && last < cats.Length ? last : 0;
+            cat = WordData.IsRegular(last) ? last : 0;
             lvl = cats[cat].LevelCount - 1;
         }
     }

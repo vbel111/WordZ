@@ -27,7 +27,7 @@ namespace ZWord
                 var day = UI.Label(tile, "DAY " + (i + 1), 30, Skin.InkSoft, TextAnchor.MiddleCenter, false);
                 day.rectTransform.Place(new Vector2(big ? 0 : 0.5f, 1), new Vector2(big ? 150 : 0, -30), new Vector2(200, 40));
 
-                int coins = GameConfig.DailyCoins[i], gems = GameConfig.DailyGems[i];
+                int coins = GameConfig.DailyCoins[i] * (Store.IsPro ? GameConfig.ProDailyMultiplier : 1), gems = GameConfig.DailyGems[i];
                 if (big)
                 {
                     // big chest on the left, coin and gem amounts side by side on the right
@@ -136,7 +136,7 @@ namespace ZWord
                 bar.Label.color = Skin.Ink;
                 bar.Label.fontSharedMaterial = Fonts.Plain;
 
-                Color btnColor = claimed ? Palette.Hex("CFC2AE") : complete ? Skin.Green : Palette.Hex("F2B53A");
+                Color btnColor = claimed ? Palette.Hex("CFC2AE") : complete ? Skin.Green : Palette.Hex("FFCF3F");
                 string label = claimed ? "DONE" : def.Coins.ToString();
                 var btn = Widgets.PriceButton(card, new Vector2(190, 96), claimed ? (Currency?)null : Currency.Coins, label, () =>
                 {
@@ -206,7 +206,8 @@ namespace ZWord
             content.anchorMax = new Vector2(1, 1);
             content.pivot = new Vector2(0.5f, 1);
             int count = Quests.All.Length;
-            content.sizeDelta = new Vector2(0, 40 + count * 214);
+            float badgesH = FeatureScreens.BadgesCard(content, -20);
+            content.sizeDelta = new Vector2(0, 40 + badgesH + count * 214);
             var scroll = viewport.gameObject.AddComponent<ScrollRect>();
             scroll.viewport = viewport;
             scroll.content = content;
@@ -221,7 +222,7 @@ namespace ZWord
                 int target = Quests.Target(q), value = Mathf.Min(def.Value(), target);
 
                 var card = Widgets.Card(content, new Vector2(900, 190), done ? Palette.Hex("F6EEE1") : Skin.Cream);
-                card.Place(new Vector2(0.5f, 1), new Vector2(0, -115 - q * 214), new Vector2(900, 190));
+                card.Place(new Vector2(0.5f, 1), new Vector2(0, -115 - badgesH - q * 214), new Vector2(900, 190));
                 Tween.PopIn(card, 0.25f, q * 0.05f);
 
                 if (questIcon != null)
@@ -258,7 +259,7 @@ namespace ZWord
                         }
                         var (c, g) = Quests.Claim(qi);
                         ZWordApp.I.ShowReward("QUEST COMPLETE!", c, g, () => MetaScreens.OpenQuests());
-                    }, ready ? Skin.Green : Palette.Hex("F2B53A"));
+                    }, ready ? Skin.Green : Palette.Hex("FFCF3F"));
                     ((RectTransform)btn.transform).Place(new Vector2(1, 0.5f), new Vector2(-120, 0), new Vector2(190, 96));
                     if (ready) btn.gameObject.AddComponent<Pulse>().Amount = 0.05f;
                 }

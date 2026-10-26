@@ -42,3 +42,7 @@ Thumbs.db
 *.key
 *.mobileprovision
 Tools/BuildAutomation/certs/
+
+# Marketing media and source art (kept locally, not in git)
+/Marketing/*.mp4
+/ArtSource/

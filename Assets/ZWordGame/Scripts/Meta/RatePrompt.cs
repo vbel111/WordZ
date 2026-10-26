@@ -43,7 +43,7 @@ namespace ZWord
             // five stars
             for (int i = 0; i < 5; i++)
             {
-                var s = UI.Img(body, Sprites.Star, Skin.Wood, "Star");
+                var s = UI.Img(body, Sprites.Star, Theme.Current.star != null ? Color.white : Skin.Wood, "Star");
                 s.rectTransform.Place(new Vector2(0.5f, 1), new Vector2((i - 2) * 125, -110), new Vector2(115, 115));
                 Tween.PopIn(s.transform, 0.35f, 0.1f + i * 0.08f);
             }

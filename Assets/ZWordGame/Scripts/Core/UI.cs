@@ -209,7 +209,7 @@ namespace ZWord
             t.rectTransform.Stretch(0, 0, 0, 0);
             if (tab != null)
             {
-                var tb = Img(root, Sprites.Rounded, Palette.Hex("F59B23"), "Tab", 3f);
+                var tb = Img(root, Sprites.Rounded, Palette.Hex("FFF3B0"), "Tab", 3f);
                 tb.rectTransform.Place(new Vector2(0.5f, 1f), new Vector2(0, 6), new Vector2(120, 40));
                 var tt = Label(tb.transform, tab, 24, Palette.Brown, TextAnchor.MiddleCenter, false);
                 tt.rectTransform.Stretch();
@@ -259,6 +259,7 @@ namespace ZWord
             img.color = new Color(0.12f, 0.04f, 0.1f, alpha);
             img.raycastTarget = true;
             var cg = rt.gameObject.AddComponent<CanvasGroup>();
+            SafeAreaBleed.Add(rt); // dim the notch / home-bar area too
             return cg;
         }
     }

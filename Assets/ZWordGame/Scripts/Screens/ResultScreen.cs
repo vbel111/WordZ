@@ -44,13 +44,14 @@ namespace ZWord
             rays.gameObject.AddComponent<Spinner>();
             BigStars(card, d.Won ? d.Rating : 0f, false);
 
-            var ribbon = Widgets.Ribbon(card, d.Daily ? "PUZZLE SOLVED!" : "LEVEL COMPLETE!", 760);
+            var ribbon = Widgets.Ribbon(card, d.Daily ? "PUZZLE SOLVED!" : d.Boss ? "BOSS DEFEATED!" : "LEVEL COMPLETE!", 760);
             ribbon.Place(new Vector2(0.5f, 1), new Vector2(0, -150), new Vector2(760, 120));
             ribbon.localRotation = Quaternion.Euler(0, 0, 0);
             Tween.PopIn(ribbon, 0.4f, 0.25f);
 
             // time
-            var timeRow = UI.Rect("Time", card).Place(new Vector2(0.5f, 1), new Vector2(d.Daily && d.Streak > 0 ? -190 : 0, -275), new Vector2(380, 80));
+            bool tag = (d.Daily && d.Streak > 0) || d.CrownEarned;
+            var timeRow = UI.Rect("Time", card).Place(new Vector2(0.5f, 1), new Vector2(tag ? -190 : 0, -275), new Vector2(380, 80));
             var clockSprite = Theme.Current.iconClock != null ? Theme.Current.iconClock : Sprites.Clock;
             var clock = UI.Img(timeRow, clockSprite, Theme.Current.iconClock != null ? Color.white : Skin.Ink, "Clock");
             clock.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(-92, 0), new Vector2(66, 66));
@@ -65,7 +66,8 @@ namespace ZWord
             // reward row
             var rewards = UI.Rect("Rewards", card).Place(new Vector2(0.5f, 1), new Vector2(0, -628), new Vector2(560, 100));
             UI.Img(rewards, Sprites.Rounded, Skin.CreamShade, "Bg", 1.4f).rectTransform.Stretch();
-            bool gems = d.GemsEarned > 0;
+            int gemTotal = d.GemsEarned + d.GoldGems;
+            bool gems = gemTotal > 0;
             if (d.Daily && d.CoinsEarned == 0)
             {
                 var again = UI.Label(rewards, "Already solved today - come back tomorrow!", 30, Skin.InkSoft, TextAnchor.MiddleCenter, false);
@@ -74,9 +76,18 @@ namespace ZWord
             else
             {
                 RewardItem(rewards, Currency.Coins, d.CoinsEarned, new Vector2(gems ? -120 : 0, 0), 0.9f);
-                if (gems) RewardItem(rewards, Currency.Gems, d.GemsEarned, new Vector2(120, 0), 1.05f);
+                if (gems) RewardItem(rewards, Currency.Gems, gemTotal, new Vector2(120, 0), 1.05f);
             }
             if (d.Daily) StreakTag(card, d.Streak, -275);
+            if (d.CrownEarned) Tag(card, "CROWN EARNED!", Skin.Gold, -275);
+            if (d.NewBookWords > 0)
+            {
+                var book = UI.Label(card, "+" + d.NewBookWords + (d.NewBookWords == 1 ? " new word" : " new words") + " in your Word Book", 28, Skin.InkSoft, TextAnchor.MiddleCenter, false);
+                book.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -704), new Vector2(700, 36));
+                Tween.PopIn(book.transform, 0.3f, 1.25f);
+            }
+            if (!string.IsNullOrEmpty(d.BadgeEarned))
+                Tween.Value(0.01f, _ => { }, null, 2.4f, () => { if (card) FeatureScreens.ShowBadge(d.BadgeEarned, true); });
 
             // NEXT LEVEL (overlapping the card bottom)
             bool hasNext = !d.Daily && d.Level + 1 < cat(d).LevelCount;
@@ -90,6 +101,9 @@ namespace ZWord
             ((RectTransform)next.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 40), new Vector2(620, 140));
             Tween.PopIn(next.transform, 0.35f, 1.1f);
             next.gameObject.AddComponent<Pulse>().Amount = 0.025f;
+            // after a Daily Puzzle win, offer the (opt-in) daily reminder once
+            if (d.Daily && d.CoinsEarned > 0 && string.IsNullOrEmpty(d.BadgeEarned))
+                Tween.Value(0.01f, _ => { }, null, 2.6f, () => { if (card) FeatureScreens.AskReminders(); });
 
             BottomRow(root, d, false);
         }
@@ -106,9 +120,14 @@ namespace ZWord
         static void StreakTag(RectTransform card, int streak, float y)
         {
             if (streak <= 0) return;
-            var tag = UI.Rect("Streak", card).Place(new Vector2(0.5f, 1), new Vector2(170, y), new Vector2(360, 64));
-            UI.Img(tag, Sprites.Rounded, Palette.Hex("F59B23"), "Bg", 2f).rectTransform.Stretch();
-            var t = UI.Label(tag, streak == 1 ? "STREAK STARTED!" : streak + "-DAY STREAK!", 32, Color.white, TextAnchor.MiddleCenter);
+            Tag(card, streak == 1 ? "STREAK STARTED!" : streak + "-DAY STREAK!", Skin.Gold, y);
+        }
+
+        static void Tag(RectTransform card, string text, Color color, float y)
+        {
+            var tag = UI.Rect("Tag", card).Place(new Vector2(0.5f, 1), new Vector2(170, y), new Vector2(360, 64));
+            UI.Img(tag, Sprites.Rounded, color, "Bg", 2f).rectTransform.Stretch();
+            var t = UI.Label(tag, text, 32, Color.white, TextAnchor.MiddleCenter);
             t.rectTransform.Stretch();
             UI.Outlined(t);
             Tween.PopIn(tag, 0.35f, 1.3f);
@@ -272,8 +291,13 @@ namespace ZWord
 
         static void ShareScore(ResultData d)
         {
-            string text = $"I just scored {N(d.Total)} on {cat(d).Name} level {d.Level + 1} in {GameConfig.GameName}! Can you beat it?";
-            Share.Text(text);
+            string text = d.Daily
+                ? (d.Streak > 1
+                    ? $"Day {d.Streak} of my {GameConfig.GameName} Daily Puzzle streak - {N(d.Total)} points today! Can you beat it?"
+                    : $"I solved today's {GameConfig.GameName} Daily Puzzle with {N(d.Total)} points! Can you beat it?")
+                : d.Boss ? $"I beat the {cat(d).Name} boss board in {GameConfig.GameName} with {N(d.Total)} points! Can you beat it?"
+                : $"I just scored {N(d.Total)} on {cat(d).Name} level {d.Level + 1} in {GameConfig.GameName}! Can you beat it?";
+            Share.App(text);
         }
     }
 

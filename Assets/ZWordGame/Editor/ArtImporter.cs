@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEditor;
 
 namespace ZWord.EditorTools
@@ -6,7 +7,20 @@ namespace ZWord.EditorTools
     public class ArtImporter : AssetPostprocessor
     {
         // bump to make Unity re-run these import rules on existing textures
-        public override uint GetVersion() => 5;
+        public override uint GetVersion() => 6;
+
+        /// <summary>Gameplay music in Resources/Music: streamed Vorbis so each loop uses little RAM.</summary>
+        void OnPreprocessAudio()
+        {
+            if (!assetPath.StartsWith("Assets/ZWordGame/Resources/Music/")) return;
+            var ai = (AudioImporter)assetImporter;
+            var s = ai.defaultSampleSettings;
+            s.loadType = UnityEngine.AudioClipLoadType.Streaming;
+            s.compressionFormat = UnityEngine.AudioCompressionFormat.Vorbis;
+            s.quality = 0.6f;
+            ai.defaultSampleSettings = s;
+            ai.loadInBackground = true;
+        }
 
         void OnPreprocessTexture()
         {
@@ -49,24 +63,33 @@ namespace ZWord.EditorTools
             // the iOS/Android icon exporter can't read compressed textures (ASTC) - keep the icon as raw RGBA
             ti.textureCompression = appIcon ? TextureImporterCompression.Uncompressed : TextureImporterCompression.Compressed;
             if (appIcon) ti.isReadable = true;
+            // full-screen painted maps/backgrounds: ASTC 8x8 is ~45% smaller than the default 6x6 and looks the same
+            if (assetPath.Contains("/Maps/") || assetPath.Contains("/Backgrounds/home_bg"))
+                foreach (var plat in new[] { "iPhone", "Android" })
+                {
+                    var ps = ti.GetPlatformTextureSettings(plat);
+                    ps.overridden = true;
+                    ps.maxTextureSize = 2048;
+                    ps.format = TextureImporterFormat.ASTC_8x8;
+                    ti.SetPlatformTextureSettings(ps);
+                }
         }
 
         /// <summary>New or replaced map art is picked up by the Theme automatically.</summary>
         static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
         {
-            bool maps = false;
-            foreach (var p in imported) if (p.StartsWith("Assets/ZWordGame/Art/Maps/")) { maps = true; break; }
-            if (!maps) foreach (var p in moved) if (p.StartsWith("Assets/ZWordGame/Art/Maps/")) { maps = true; break; }
-            if (!maps) return;
+            bool Hit(string p) => p.StartsWith("Assets/ZWordGame/Art/Maps/") || p.StartsWith("Assets/ZWordGame/Art/Categories/")
+                                  || p == "Assets/ZWordGame/Content/categories.json";
+            if (!imported.Any(Hit) && !moved.Any(Hit)) return;
             EditorApplication.delayCall += () =>
             {
                 var theme = AssetDatabase.LoadAssetAtPath<Theme>("Assets/ZWordGame/Resources/ZWordTheme.asset");
                 if (theme == null) return;
-                int n = ThemeAutoSetup.AssignMaps(theme);
-                if (n > 0)
+                if (ThemeAutoSetup.SyncCategoryArt(theme))
                 {
+                    EditorUtility.SetDirty(theme);
                     AssetDatabase.SaveAssets();
-                    UnityEngine.Debug.Log($"[ZWord] Applied new map art to {n} categor{(n == 1 ? "y" : "ies")}.", theme);
+                    UnityEngine.Debug.Log("[ZWord] Updated category icons / map art.", theme);
                 }
             };
         }

@@ -18,6 +18,22 @@ namespace ZWord
             var gems = Widgets.CurrencyChip(root, Currency.Gems, 160);
             gems.Place(new Vector2(0, 1), new Vector2(250, -198), new Vector2(160, 62));
 
+            // Word Z Pro -> RevenueCat Paywall (or Customer Center when already Pro)
+            if (GameConfig.ProEnabled)
+            {
+            var pro = UI.Chunky(root, new Vector2(300, 70), Store.IsPro ? Skin.Green : Skin.Gold, Store.IsPro ? "PRO  ACTIVE" : "GO PRO", 34, () =>
+            {
+                AudioManager.Click();
+                Store.OpenPro(msg =>
+                {
+                    if (msg != null) ZWordApp.Toast(root, msg, new Vector2(0, -420), Palette.Hex("7CF06B"));
+                    ShopScreen.Open(tab);
+                });
+            });
+            ((RectTransform)pro.transform).Place(new Vector2(1, 1), new Vector2(-190, -198), new Vector2(300, 70));
+            if (!Store.IsPro) pro.gameObject.AddComponent<Pulse>().Amount = 0.04f;
+            }
+
             var content = UI.Rect("TabContent", root);
             content.anchorMin = Vector2.zero;
             content.anchorMax = Vector2.one;

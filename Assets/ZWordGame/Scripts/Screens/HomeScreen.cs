@@ -12,7 +12,9 @@ namespace ZWord
             var bgArt = Theme.Current.homeBackground;
             if (bgArt != null)
             {
-                var bg = UI.Img(root, bgArt, Color.white, "HomeBg");
+                var holder = UI.Rect("HomeBgHolder", root).Stretch();
+                SafeAreaBleed.Add(holder);
+                var bg = UI.Img(holder, bgArt, Color.white, "HomeBg");
                 bg.rectTransform.Stretch();
                 var fit = bg.gameObject.AddComponent<AspectRatioFitter>();
                 fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
@@ -24,6 +26,7 @@ namespace ZWord
             topShade.rectTransform.pivot = new Vector2(0.5f, 1);
             topShade.rectTransform.sizeDelta = new Vector2(0, 220);
             topShade.rectTransform.anchoredPosition = Vector2.zero;
+            SafeAreaBleed.Add(topShade.rectTransform);
 
             // life in the sky
             Ambience.Add(root, AmbienceKind.Clouds, new Color(1, 1, 1, 0.8f), 5, 0.18f);
@@ -55,6 +58,7 @@ namespace ZWord
             Tween.PopIn(cats.transform, 0.35f, 0.22f);
 
             BuildDailyPuzzle(root);
+            BuildEventBanner(root);
 
             BuildDock(root);
         }
@@ -72,7 +76,7 @@ namespace ZWord
             int streak = DailyPuzzle.Streak;
             var card = UI.Rect("DailyPuzzle", root).Place(new Vector2(0.5f, 0), new Vector2(30, 870), new Vector2(600, 124));
             UI.Img(card, Sprites.Rounded, new Color(0.45f, 0.18f, 0.03f, 0.5f), "Shadow", 1.6f).rectTransform.Stretch(0, -10, 0, 10);
-            var face = UI.Img(card, Sprites.Rounded, done ? Palette.Hex("E3A35E") : Palette.Hex("FF8A3D"), "Face", 1.6f);
+            var face = UI.Img(card, Sprites.Rounded, done ? Palette.Hex("E6C15A") : Palette.Hex("FFC928"), "Face", 1.6f);
             face.rectTransform.Stretch();
             face.raycastTarget = true;
             var gloss = UI.Img(card, Sprites.Rounded, new Color(1, 1, 1, 0.18f), "Gloss", 2.4f);
@@ -96,7 +100,7 @@ namespace ZWord
             sub.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(330, -26), new Vector2(380, 40));
 
             var go = UI.Rect("Go", card).Place(new Vector2(1, 0.5f), new Vector2(-62, 0), new Vector2(84, 84));
-            UI.Img(go, Sprites.CircleSprite, done ? Skin.Green : Palette.Hex("FFC93C"), "Bg").rectTransform.Stretch();
+            UI.Img(go, Sprites.CircleSprite, done ? Skin.Green : Color.white, "Bg").rectTransform.Stretch();
             UI.Img(go, done ? Sprites.Check : Sprites.Play, done ? Color.white : Palette.Brown, "Glyph").rectTransform.Stretch(20, 20, 18, 20);
 
             var btn = card.gameObject.AddComponent<Button>();
@@ -109,7 +113,72 @@ namespace ZWord
                 Widgets.Badge(card, "!", 46);
                 card.gameObject.AddComponent<Pulse>().Amount = 0.02f;
             }
+
+            // streak flame: number of days in a row, top-left corner of the card
+            if (streak > 0)
+            {
+                var flame = UI.Rect("Streak", card).Place(new Vector2(0, 1), new Vector2(18, -6), new Vector2(110, 64));
+                UI.Img(flame, Sprites.Rounded, Palette.Hex("E5484D"), "Bg", 2.2f).rectTransform.Stretch(18, 0, 0, 0);
+                var fi = UI.Img(flame, Widgets.HomeIcon("icon_flame", Sprites.Star), Color.white, "Flame");
+                fi.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(26, 6), new Vector2(64, 64));
+                fi.preserveAspect = true;
+                var fn = UI.Label(flame, streak.ToString(), 36, Color.white, TextAnchor.MiddleCenter);
+                fn.rectTransform.Stretch(52, 0, 4, 0);
+                UI.Outlined(fn);
+                flame.localRotation = Quaternion.Euler(0, 0, 6);
+                if (!done) flame.gameObject.AddComponent<Pulse>().Amount = 0.05f;
+            }
             Tween.PopIn(card, 0.35f, 0.15f);
+        }
+
+        /// <summary>Limited-time event banner (e.g. HALLOWEEN) above the Daily Puzzle while the event is live.</summary>
+        static void BuildEventBanner(RectTransform root)
+        {
+            int ev = WordData.ActiveEvent();
+            if (ev < 0) return;
+            var cat = WordData.Categories[ev];
+            int done = Mathf.Min(Save.Completed(ev), cat.LevelCount);
+            bool finished = done >= cat.LevelCount;
+
+            var card = UI.Rect("Event", root).Place(new Vector2(0.5f, 0), new Vector2(30, 1012), new Vector2(600, 124));
+            UI.Img(card, Sprites.Rounded, new Color(0.2f, 0.1f, 0.03f, 0.5f), "Shadow", 1.6f).rectTransform.Stretch(0, -10, 0, 10);
+            var face = UI.Img(card, Sprites.Rounded, Palette.Hex("4A2A14"), "Face", 1.6f);
+            face.rectTransform.Stretch();
+            face.raycastTarget = true;
+            var gloss = UI.Img(card, Sprites.Rounded, new Color(1, 1, 1, 0.12f), "Gloss", 2.4f);
+            gloss.rectTransform.anchorMin = new Vector2(0, 0.55f);
+            gloss.rectTransform.anchorMax = Vector2.one;
+            gloss.rectTransform.offsetMin = new Vector2(80, 0);
+            gloss.rectTransform.offsetMax = new Vector2(-16, -8);
+
+            var icon = UI.Img(card, Widgets.HomeIcon("icon_event_" + Widgets.Slug(cat.Name), Sprites.Star), Color.white, "Icon");
+            icon.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(10, 8), new Vector2(150, 150));
+            icon.preserveAspect = true;
+            icon.gameObject.AddComponent<Bobber>().Amplitude = 4;
+
+            var title = UI.Label(card, cat.Name + " EVENT", 42, Skin.Gold, TextAnchor.MiddleLeft);
+            title.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(330, 20), new Vector2(380, 56));
+            UI.Outlined(title);
+            title.enableAutoSizing = true;
+            title.fontSizeMin = 28;
+            title.fontSizeMax = 42;
+            string Sub() => finished ? "Badge earned! Ends in " + Events.TimeLeftText(cat)
+                                     : done + "/" + cat.LevelCount + " levels  •  ends in " + Events.TimeLeftText(cat);
+            var sub = UI.Label(card, Sub(), 26, new Color(1, 1, 1, 0.92f), TextAnchor.MiddleLeft, false);
+            sub.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(330, -26), new Vector2(380, 40));
+            sub.gameObject.AddComponent<Ticker>().OnTick = () => { if (sub) sub.text = Sub(); };
+
+            var go = UI.Rect("Go", card).Place(new Vector2(1, 0.5f), new Vector2(-62, 0), new Vector2(84, 84));
+            UI.Img(go, Sprites.CircleSprite, finished ? Skin.Green : Skin.Gold, "Bg").rectTransform.Stretch();
+            UI.Img(go, finished ? Sprites.Check : Sprites.Play, finished ? Color.white : Palette.Brown, "Glyph").rectTransform.Stretch(20, 20, 18, 20);
+
+            var btn = card.gameObject.AddComponent<Button>();
+            btn.transition = Selectable.Transition.None;
+            btn.targetGraphic = face;
+            btn.onClick.AddListener(() => { AudioManager.Click(); ZWordApp.I.ShowMap(ev); });
+            card.gameObject.AddComponent<PressEffect>();
+            if (!finished) Widgets.Badge(card, "!", 46);
+            Tween.PopIn(card, 0.35f, 0.1f);
         }
 
         static void BuildTopBar(RectTransform root)
@@ -151,14 +220,15 @@ namespace ZWord
             {
                 ("Rewards", Icon("icon_calendar", t.iconCalendar != null ? t.iconCalendar : Sprites.CalendarGlyph), () => ZWordApp.I.OpenDailyReward()),
                 ("Challenges", Icon("icon_trophy", t.trophy != null ? t.trophy : Sprites.TrophyGlyph), () => ZWordApp.I.ShowChallenges()),
+                ("Words", Icon("icon_book", Sprites.ScrollGlyph), () => FeatureScreens.OpenWordBook()),
                 ("Shop", Icon("icon_shop", t.shopIcon != null ? t.shopIcon : Sprites.ShopGlyph), () => ZWordApp.I.ShowShop()),
                 ("Quests", Icon("icon_quests", t.quest != null ? t.quest : Sprites.ScrollGlyph), () => ZWordApp.I.ShowQuests()),
             };
             for (int i = 0; i < specs.Length; i++)
             {
                 var (label, icon, action) = specs[i];
-                var b = Widgets.DockButton(root, icon, Color.white, label, action, 140, 0.78f);
-                ((RectTransform)b.transform).Place(new Vector2(0.5f, 0), new Vector2(-345 + i * 230, 190), new Vector2(140, 140));
+                var b = Widgets.DockButton(root, icon, Color.white, label, action, 132, 0.78f);
+                ((RectTransform)b.transform).Place(new Vector2(0.5f, 0), new Vector2(-404 + i * 202, 190), new Vector2(132, 132));
                 Tween.PopIn(b.transform, 0.3f, 0.3f + i * 0.06f);
                 int badge = ZWordApp.I.DockBadge(i);
                 if (badge > 0) Widgets.Badge(b.transform, badge.ToString(), 46);

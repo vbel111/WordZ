@@ -15,13 +15,38 @@ namespace ZWord
         public const int BuildNumber = 1;   // increase for every upload
 
         // RevenueCat public SDK keys (Project settings > API keys in the RevenueCat dashboard). Safe to ship in the app.
-        public const string RevenueCatAppleKey = "REPLACE_WITH_APPL_KEY";
+        public const string RevenueCatAppleKey = "appl_cyYraodxUAHRrKSTWrahYljTBRD";
         public const string RevenueCatGoogleKey = "REPLACE_WITH_GOOG_KEY";
+        // RevenueCat Test Store key: real purchase flow with fake money, no App Store / Play setup needed.
+        // Use it for development + TestFlight; set UseRevenueCatTestStore = false (and fill the two keys above) for release.
+        public const string RevenueCatTestKey = "test_FyGNvRbPQHceOTEToxJLAQDIktx";
+        public const bool UseRevenueCatTestStore = false;
+
+        // Word Z Pro (RevenueCat entitlement - attach your subscription/lifetime products to it in the dashboard)
+        public const bool ProEnabled = false;          // no Pro for now: Word Z sells coins, gems and the Supporter Pack
+        public const string ProEntitlement = "wordz_pro";
+        public const int ProDailyMultiplier = 2;       // Pro: daily reward coins x2
+        public const int ProLevelBonusCoins = 20;      // Pro: extra coins on every level win
+
+        // the "consumable" product (one-time, can be bought again) - what it gives
+        public const string ConsumableId = "consumable";
+        public const int ConsumableCoins = 500;
 
         // links (edit before release)
         public const string SupportEmail = "support@wordz.game";
         public const string PrivacyUrl = "https://example.com/wordz/privacy";
         public const string TermsUrl = "https://example.com/wordz/terms";
+
+        // App Store Connect > your app > App Information > "Apple ID" (a number like 6741234567)
+        public const string AppleAppId = "6826203884";
+
+        /// <summary>Store page for this platform - used by Share and the rate prompt.</summary>
+        public static string StoreUrl =>
+#if UNITY_IOS
+            string.IsNullOrEmpty(AppleAppId) ? "" : "https://apps.apple.com/app/id" + AppleAppId;
+#else
+            "https://play.google.com/store/apps/details?id=" + BundleId;
+#endif
 
         // shop (product ids are used by IAP in M5)
         public static readonly (string id, int coins, string price, string tag)[] CoinPacks =
@@ -81,14 +106,34 @@ namespace ZWord
         // category unlock
         public static int UnlockGems(int group) => group <= 1 ? 0 : group == 2 ? 15 : 25;
 
-        // map chests at 25 / 50 / 75 stars
-        public static readonly int[] ChestStars = { 25, 50, 75 };
-        public static readonly int[] ChestCoins = { 150, 300, 600 };
-        public static readonly int[] ChestGems = { 1, 2, 5 };
+        // map chests every 25 stars (50 levels x 3 stars = 150)
+        public static readonly int[] ChestStars = { 25, 50, 75, 100, 125, 150 };
+        public static readonly int[] ChestCoins = { 150, 300, 600, 800, 1000, 1500 };
+        public static readonly int[] ChestGems = { 1, 2, 5, 5, 8, 12 };
 
         // daily reward calendar (day 7 is the big chest)
         public static readonly int[] DailyCoins = { 100, 120, 150, 200, 250, 300, 600 };
         public static readonly int[] DailyGems = { 1, 0, 2, 0, 1, 2, 8 };
+
+        // boss board (last level of each category, 37 tiles): one-time crown reward
+        public const int BossCoins = 300;
+        public const int BossGems = 5;
+
+        // golden hex: a gold tile hidden in some levels; finding the word through it pays a gem (capped per day)
+        public const float GoldenChance = 0.35f;
+        public const int GoldenPerDay = 3;
+        public const int GoldenGems = 1;
+
+        // combos: words found within this many seconds of each other chain up; x1.5 then x2 points, +coins from x3
+        public const float ComboWindow = 6f;
+        public const int ComboCoins = 2;
+
+        // Word Book: completing a category's page
+        public const int BookPageGems = 10;
+
+        // limited-time event: finishing every level earns its badge + this
+        public const int EventBadgeCoins = 500;
+        public const int EventBadgeGems = 10;
 
         // daily challenges
         public const int ChallengesPerDay = 4;

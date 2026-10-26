@@ -53,10 +53,13 @@ namespace ZWord
 
             var cats = WordData.Categories;
             int index = 0;
+            // a live event comes first; finished events disappear from the list
             for (int c = 0; c < cats.Length; c++)
-                if (Save.Unlocked(c)) Tween.PopIn(Card(content, c, false), 0.3f, 0.03f * index++);
+                if (cats[c].IsEvent && cats[c].Live) Tween.PopIn(Card(content, c, false), 0.3f, 0.03f * index++);
             for (int c = 0; c < cats.Length; c++)
-                if (!Save.Unlocked(c)) Tween.PopIn(Card(content, c, true), 0.3f, 0.03f * index++);
+                if (!cats[c].IsEvent && Save.Unlocked(c)) Tween.PopIn(Card(content, c, false), 0.3f, 0.03f * index++);
+            for (int c = 0; c < cats.Length; c++)
+                if (!cats[c].IsEvent && !Save.Unlocked(c)) Tween.PopIn(Card(content, c, true), 0.3f, 0.03f * index++);
         }
 
         static string Slug(string name) => name.ToLowerInvariant().Replace(" & ", "_").Replace(' ', '_');
@@ -143,6 +146,12 @@ namespace ZWord
             si.Place(new Vector2(0, 0.5f), new Vector2(18, 0), new Vector2(34, 34));
             var st = UI.Label(starRow, starsEarned + " / " + total * 3, 28, Skin.InkSoft, TextAnchor.MiddleLeft, false);
             st.rectTransform.Stretch(44, 0, 0, 0);
+            if (Save.HasCrown(c) && Theme.Current.crown != null)
+            {
+                var crown = UI.Img(starRow, Theme.Current.crown, Color.white, "Crown");
+                crown.rectTransform.Place(new Vector2(1, 0.5f), new Vector2(-60, 2), new Vector2(50, 44));
+                crown.preserveAspect = true;
+            }
 
             var bar = Widgets.Progress(holder, new Vector2(10, 26), complete ? Skin.Gold : cat.Color, new Color(0.36f, 0.2f, 0.06f, 0.12f));
             bar.Root.anchorMin = new Vector2(0, 0);
@@ -153,7 +162,16 @@ namespace ZWord
             var pt = UI.Label(holder, done + "/" + total, 28, Skin.Ink, TextAnchor.MiddleRight, false);
             pt.rectTransform.Place(new Vector2(1, 0), new Vector2(-66, 43), new Vector2(110, 40));
 
-            if (complete || current)
+            if (cat.IsEvent)
+            {
+                var etag = UI.Rect("EventTag", holder).Place(new Vector2(1, 1), new Vector2(-100, -30), new Vector2(200, 52));
+                etag.localRotation = Quaternion.Euler(0, 0, -6);
+                UI.Img(etag, Sprites.Rounded, Palette.Hex("4A2A14"), "Bg", 2.2f).rectTransform.Stretch();
+                var et = UI.Label(etag, complete ? "BADGE!" : Events.TimeLeftText(cat) + " LEFT", 26, Skin.Gold, TextAnchor.MiddleCenter);
+                et.rectTransform.Stretch();
+                etag.gameObject.AddComponent<Pulse>().Amount = 0.04f;
+            }
+            else if (complete || current)
             {
                 var tag = UI.Rect("Tag", holder).Place(new Vector2(1, 1), new Vector2(-84, -30), new Vector2(170, 52));
                 tag.localRotation = Quaternion.Euler(0, 0, -6);

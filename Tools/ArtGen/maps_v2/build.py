@@ -16,7 +16,10 @@ def builders():
             out.update(importlib.import_module(m).BUILDERS)
         except ModuleNotFoundError:
             pass
-    import city
+    try:
+        import city2 as city   # v3 riverside old town
+    except ModuleNotFoundError:
+        import city
     out['city'] = city.build
     return out
 

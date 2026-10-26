@@ -56,6 +56,12 @@ namespace ZWord
         int hintsUsed;
         float lastFoundTime = -99f;
         int combo;
+        bool hasGold;
+        Hex goldHex;
+        int goldGems, newBookWords;
+        RectTransform comboMeter, comboFill;
+        TMPro.TMP_Text comboText;
+        bool IsBoss => !DailyMode && !TutorialMode && LevelDatabase.IsBoss(level.CategoryIndex, level.LevelIndex);
         public bool TutorialMode { get; private set; }
         public bool DailyMode { get; private set; }
         public event System.Action<PlacedWord> WordFound;
@@ -68,7 +74,7 @@ namespace ZWord
         public RectTransform BoosterButton(Booster b) => boosterButtons.TryGetValue(b, out var r) ? r : null;
 
         public static GameScreen Build(RectTransform root, int cat, int lvl) =>
-            BuildCustom(root, LevelDatabase.Get(cat, lvl) ?? LevelGenerator.Generate(cat, lvl), false);
+            BuildCustom(root, LevelVariant.For(cat, lvl), false);
 
         public static GameScreen BuildCustom(RectTransform root, Level level, bool tutorial, bool daily = false)
         {
@@ -113,7 +119,7 @@ namespace ZWord
             rt.anchorMax = new Vector2(1, 1);
             rt.pivot = new Vector2(0.5f, 1);
             float h = 1080f * tex.height / Mathf.Max(1, tex.width);
-            rt.sizeDelta = new Vector2(0, Mathf.Max(h, 2400f));
+            rt.sizeDelta = new Vector2(0, Mathf.Max(h, 2700f)); // tall enough to also cover notch + home bar
             rt.anchoredPosition = Vector2.zero;
             var raw = go.GetComponent<RawImage>();
             raw.texture = tex;
@@ -127,6 +133,10 @@ namespace ZWord
             vig.rectTransform.Stretch(-80, -80, -80, -80);
             vig.raycastTarget = false;
             vig.transform.SetSiblingIndex(2);
+            // run the art under the notch / home bar too (the HUD stays in the safe area)
+            SafeAreaBleed.Add(rt);
+            SafeAreaBleed.Add(tint.rectTransform);
+            SafeAreaBleed.Add(vig.rectTransform);
         }
 
         void BuildUI()
@@ -135,9 +145,10 @@ namespace ZWord
             BuildBackdrop();
             if (TutorialMode) ZWordApp.Header(root, "HOW TO PLAY", null, () => TutorialSkip?.Invoke());
             else if (DailyMode) ZWordApp.Header(root, "DAILY", System.DateTime.Now.ToString("MMM d").ToUpperInvariant(), OpenPause);
-            else ZWordApp.Header(root, cat.Name, "LV " + (level.LevelIndex + 1), OpenPause);
+            else ZWordApp.Header(root, cat.Name, IsBoss ? "BOSS" : "LV " + (level.LevelIndex + 1), OpenPause);
 
             BuildHud();
+            BuildComboMeter();
 
             // under the bar: rotate (left) and hints (right), mockup screen 4
             var rotate = Widgets.RoundButton(root, Sprites.RotateArrow, 92, Skin.Wood, () => { board.Rotate(); Rotated?.Invoke(); if (!TutorialMode) Challenges.Report(Metric.Rotate, 1); }, 0.55f);
@@ -183,6 +194,17 @@ namespace ZWord
             board.SelectionChanged += OnSelectionChanged;
             board.SelectionCompleted += OnSelectionCompleted;
             rotate.gameObject.SetActive(board.CanRotate);
+
+            // golden hex: sometimes one tile is gold; the word through it pays a gem
+            if (!TutorialMode && GoldenHex.Roll())
+            {
+                goldHex = level.Cells[Random.Range(0, level.Cells.Count)];
+                hasGold = true;
+                board.SetGolden(goldHex);
+                Tween.Value(0.01f, _ => { }, null, 0.9f, () => { if (this && running) ZWordApp.Toast(root, "FIND THE GOLDEN HEX!", new Vector2(0, 300), Palette.Hex("FFD02E")); });
+            }
+            if (IsBoss)
+                Tween.Value(0.01f, _ => { }, null, 0.5f, () => { if (this && running) ZWordApp.Toast(root, "BOSS BOARD!", new Vector2(0, 420), Skin.Gold); });
 
             timeLeft = level.TimeLimit;
             running = true;
@@ -330,6 +352,7 @@ namespace ZWord
             elapsed += Time.deltaTime;
             if (!relax) timeLeft -= Time.deltaTime;
             UpdateHud();
+            UpdateComboMeter();
             if (!relax && timeLeft <= 0f) OutOfTime();
         }
 
@@ -719,10 +742,21 @@ namespace ZWord
             FillRow(match);
             UpdateWordsCounter();
             int pts = match.Word.Length * 100 + Mathf.Max(0, match.Word.Length - 3) * 50;
-            combo = Time.unscaledTime - lastFoundTime < 6f ? combo + 1 : 1;
+            combo = Time.unscaledTime - lastFoundTime < GameConfig.ComboWindow ? combo + 1 : 1;
             lastFoundTime = Time.unscaledTime;
-            int comboPts = combo > 1 ? 50 * (combo - 1) : 0;
+            // chain words quickly: x1.5 points for the 2nd, x2 from the 3rd (plus a couple of coins)
+            float mult = combo >= 3 ? 2f : combo == 2 ? 1.5f : 1f;
+            int comboPts = Mathf.RoundToInt(pts * (mult - 1f));
+            if (combo >= 3 && !TutorialMode) Save.Coins += GameConfig.ComboCoins;
             wordScore += pts + comboPts;
+            if (!TutorialMode && Save.RecordWord(level.CategoryIndex, match.Word)) newBookWords++;
+            if (hasGold && match.Path.Contains(goldHex))
+            {
+                hasGold = false;
+                int g = GoldenHex.Collect();
+                goldGems += g;
+                if (g > 0) GemBurst(match.Path);
+            }
             AudioManager.Success();
             Haptics.Medium();
             ZWordApp.Toast(root, "+" + (pts + comboPts), new Vector2(0, 520), Color.white);
@@ -753,7 +787,7 @@ namespace ZWord
             holder.localRotation = Quaternion.Euler(0, 0, Random.Range(-6f, 6f));
             if (comboPts > 0)
             {
-                var c = UI.Label(holder, "COMBO x" + combo + "  +" + comboPts, 52, Palette.Hex("FFD02E"), TextAnchor.MiddleCenter);
+                var c = UI.Label(holder, (combo >= 3 ? "COMBO x2" : "COMBO x1.5") + "  +" + comboPts, 52, Palette.Hex("FFD02E"), TextAnchor.MiddleCenter);
                 c.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, -20), new Vector2(800, 70));
                 UI.Outlined(c);
             }
@@ -767,6 +801,58 @@ namespace ZWord
                 foreach (var g in holder.GetComponentsInChildren<TMP_Text>()) g.alpha = a;
                 holder.anchoredPosition = new Vector2(0, 260 + k * 40);
             }, null, 0, () => { if (holder) Destroy(holder.gameObject); });
+        }
+
+        /// <summary>Small pill under the timer: the multiplier the next word gets, with a bar draining over the combo window.</summary>
+        void BuildComboMeter()
+        {
+            comboMeter = UI.Rect("Combo", root).Place(new Vector2(0.5f, 1), new Vector2(0, -306), new Vector2(240, 40));
+            UI.Img(comboMeter, Sprites.Rounded, new Color(0.36f, 0.2f, 0.06f, 0.7f), "Bg", 2.6f).rectTransform.Stretch();
+            comboFill = UI.Rect("Fill", comboMeter);
+            comboFill.anchorMin = Vector2.zero;
+            comboFill.anchorMax = Vector2.one;
+            comboFill.offsetMin = new Vector2(4, 4);
+            comboFill.offsetMax = new Vector2(-4, -4);
+            UI.Img(comboFill, Sprites.Rounded, Skin.Gold, "FillImg", 3f).rectTransform.Stretch();
+            comboText = UI.Label(comboMeter, "", 26, Color.white, TextAnchor.MiddleCenter);
+            comboText.rectTransform.Stretch();
+            UI.Outlined(comboText);
+            comboMeter.gameObject.SetActive(false);
+        }
+
+        void UpdateComboMeter()
+        {
+            if (comboMeter == null || TutorialMode) return;
+            float left = GameConfig.ComboWindow - (Time.unscaledTime - lastFoundTime);
+            bool show = running && left > 0f && combo >= 1 && level.Words.Any(w => !w.Found);
+            if (comboMeter.gameObject.activeSelf != show) comboMeter.gameObject.SetActive(show);
+            if (!show) return;
+            comboFill.anchorMax = new Vector2(Mathf.Clamp01(left / GameConfig.ComboWindow), 1);
+            comboText.text = combo >= 2 ? "NEXT WORD x2!" : "NEXT WORD x1.5";
+        }
+
+        /// <summary>The golden hex pays out: gems fly from the word to the top of the screen.</summary>
+        void GemBurst(List<Hex> path)
+        {
+            AudioManager.Bonus();
+            Haptics.Success();
+            ZWordApp.Toast(root, "GOLDEN HEX! +" + GameConfig.GoldenGems + " GEM", new Vector2(0, 420), Palette.Hex("FFD02E"));
+            Vector2 from = root.InverseTransformPoint(board.CellWorldPos(path[path.Count / 2]));
+            Vector2 to = new Vector2(0, root.rect.height * 0.5f - 120f);
+            for (int i = 0; i < 4; i++)
+            {
+                var gem = Widgets.CurrencyIcon(root, Currency.Gems, 70);
+                gem.anchorMin = gem.anchorMax = new Vector2(0.5f, 0.5f);
+                gem.anchoredPosition = from;
+                var spread = Random.insideUnitCircle * 160f;
+                Tween.Value(0.9f, k =>
+                {
+                    if (!gem) return;
+                    var mid = from + spread;
+                    gem.anchoredPosition = Vector2.Lerp(Vector2.Lerp(from, mid, k), Vector2.Lerp(mid, to, k), k);
+                    gem.localScale = Vector3.one * (k < 0.2f ? k / 0.2f : 1f);
+                }, Tween.OutCubic, i * 0.08f, () => { if (gem) Destroy(gem.gameObject); });
+            }
         }
 
         /// <summary>Coins burst out of a bonus word and fly up to the hints button.</summary>
@@ -857,9 +943,12 @@ namespace ZWord
                 TimeBonus = timeBonus,
                 BonusScore = bonusScore,
                 BonusWords = bonusFound.Count,
-                CoinsEarned = GameConfig.LevelCoins(stars),
-                GemsEarned = stars == 3 ? GameConfig.GemsForThreeStars : 0
+                CoinsEarned = GameConfig.LevelCoins(stars) + (Store.IsPro ? GameConfig.ProLevelBonusCoins : 0),
+                GemsEarned = stars == 3 ? GameConfig.GemsForThreeStars : 0,
+                GoldGems = goldGems,
+                NewBookWords = newBookWords
             };
+            if (comboMeter) comboMeter.gameObject.SetActive(false);
             var d = Save.Data;
             if (hintsUsed == 0) { d.noHintWins++; Challenges.Report(Metric.NoHints, 1); }
             if (DailyMode)
@@ -890,13 +979,22 @@ namespace ZWord
             Challenges.Report(Metric.Score, data.Total);
             if (stars == 3) Challenges.Report(Metric.ThreeStars, 1);
             d.lastCategory = level.CategoryIndex;
+            if (IsBoss)
+            {
+                data.Boss = true;
+                var (bc, bg) = Boss.Crown(level.CategoryIndex, level.LevelIndex);
+                data.CrownEarned = bc > 0;
+                data.CoinsEarned += bc;
+                data.GemsEarned += bg;
+            }
             Save.SetStars(level.CategoryIndex, level.LevelIndex, stars);
             Save.SetCompleted(level.CategoryIndex, level.LevelIndex + 1);
+            if (Events.TryAwardBadge(level.CategoryIndex)) data.BadgeEarned = level.Category.Badge;
             data.NewBest = Save.SubmitScore(level.CategoryIndex, level.LevelIndex, data.Total);
             data.BestScore = Save.BestScore(level.CategoryIndex, level.LevelIndex);
             Save.StarPoints += data.Total;
             Save.Coins += data.CoinsEarned;
-            if (data.GemsEarned > 0) Save.Gems += data.GemsEarned;
+            if (data.GemsEarned > 0) Save.Gems += data.GemsEarned;   // golden hex gems were already paid when found
 
             AudioManager.Win();
             Haptics.Success();
