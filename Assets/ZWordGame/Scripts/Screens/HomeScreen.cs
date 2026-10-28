@@ -191,7 +191,7 @@ namespace ZWord
             bar.anchoredPosition = Vector2.zero;
 
             // profile pill
-            var prof = UI.Rect("Profile", bar).Place(new Vector2(0, 0.5f), new Vector2(200, -10), new Vector2(300, 76));
+            var prof = UI.Rect("Profile", bar).Place(new Vector2(0, 0.5f), new Vector2(170, -10), new Vector2(240, 76));
             UI.Img(prof, Sprites.Rounded, Skin.ChipBg, "Bg", 1.6f).rectTransform.Stretch(30, 0, 0, 0);
             var av = Theme.Current.iconAvatar != null ? Theme.Current.iconAvatar : Sprites.AvatarGlyph;
             var avatar = UI.Img(prof, av, Color.white, "Avatar");
@@ -204,10 +204,12 @@ namespace ZWord
             avatar.raycastTarget = true;
             profBtn.onClick.AddListener(() => { AudioManager.Click(); ZWordApp.I.OpenSettings(); });
 
-            var stars = Widgets.CurrencyChip(bar, Currency.Stars, 220);
-            stars.Place(new Vector2(0.5f, 0.5f), new Vector2(40, -10), new Vector2(220, 66));
-            var coins = Widgets.CurrencyChip(bar, Currency.Coins, 200);
-            coins.Place(new Vector2(0.5f, 0.5f), new Vector2(270, -10), new Vector2(200, 66));
+            var stars = Widgets.CurrencyChip(bar, Currency.Stars, 190);
+            stars.Place(new Vector2(0.5f, 0.5f), new Vector2(-140, -10), new Vector2(190, 66));
+            var coins = Widgets.CurrencyChip(bar, Currency.Coins, 180);
+            coins.Place(new Vector2(0.5f, 0.5f), new Vector2(55, -10), new Vector2(180, 66));
+            var gems = Widgets.CurrencyChip(bar, Currency.Gems, 170);
+            gems.Place(new Vector2(0.5f, 0.5f), new Vector2(245, -10), new Vector2(170, 66));
 
             var gear = Widgets.RoundButton(bar, Sprites.Gear, 96, Skin.Wood, () => ZWordApp.I.OpenSettings(), 0.56f);
             ((RectTransform)gear.transform).Place(new Vector2(1, 0.5f), new Vector2(-70, -10), new Vector2(96, 96));

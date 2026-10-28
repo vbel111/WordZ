@@ -18,7 +18,6 @@ namespace ZWord
             int count = Mathf.Max(1, category.LevelCount);
             int current = Mathf.Min(Save.Completed(cat), count - 1);
 
-            Widgets.Header(root, category.Name, "LV " + (current + 1), () => ZWordApp.I.ShowCategories());
             ZWordApp.I.OnBack = () => ZWordApp.I.ShowCategories();
 
             // scroll area between header and progress card
@@ -127,6 +126,9 @@ namespace ZWord
             for (int i = 0; i < count; i++) Node(nodeLayer, cat, i, current, pos[i]);
 
             BuildProgressCard(root, cat);
+
+            // header last so the back button, title and gear always draw on top of the map art
+            Widgets.Header(root, category.Name, "LV " + (current + 1), () => ZWordApp.I.ShowCategories());
 
             // scroll so the current level sits a bit below the middle
             Canvas.ForceUpdateCanvases();
