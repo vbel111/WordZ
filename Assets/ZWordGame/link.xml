@@ -1,0 +1,6 @@
+<!-- Keeps code that is only called from native code (RevenueCat's iOS/Android callbacks)
+     from being removed by IL2CPP managed code stripping. -->
+<linker>
+  <assembly fullname="revenuecat.purchases-unity" preserve="all" />
+  <assembly fullname="revenuecat.purchases-unity-ui" preserve="all" />
+</linker>

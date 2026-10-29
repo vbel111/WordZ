@@ -31,6 +31,25 @@ namespace ZWord
         /// <summary>True once the real store is configured and talking to RevenueCat.</summary>
         public static bool Available { get; private set; }
 
+        /// <summary>Why the store isn't available yet (shown in the toast so a TestFlight build tells us).</summary>
+        public static string Status { get; private set; } =
+#if REVENUECAT
+            "STARTING";
+#else
+            "NOT IN THIS BUILD";
+#endif
+        static MonoBehaviour runner;
+        static bool starting;
+
+        /// <summary>Toast text for a purchase attempted while the store isn't ready.</summary>
+        static string NotReadyMessage()
+        {
+#if REVENUECAT && !UNITY_EDITOR
+            if (!starting && runner != null) runner.StartCoroutine(InitRevenueCat()); // try again
+#endif
+            return Status == "STARTING" ? "STORE IS LOADING - TRY AGAIN IN A MOMENT" : "STORE NOT AVAILABLE (" + Status + ")";
+        }
+
         /// <summary>Has the "wordz_pro" entitlement (cached in the save; refreshed from RevenueCat).</summary>
         public static bool IsPro => GameConfig.ProEnabled && Save.Data != null && Save.Data.pro;
 
@@ -48,7 +67,7 @@ namespace ZWord
         public static string Price(string id, string fallback) => prices.TryGetValue(id, out var p) && !string.IsNullOrEmpty(p) ? p : fallback;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() { Available = false; busy = false; prices.Clear(); Changed = null; ProExpires = null; }
+        static void ResetStatics() { Available = false; starting = false; runner = null; busy = false; prices.Clear(); Changed = null; ProExpires = null; }
 
         static string ApiKey
         {
@@ -63,6 +82,7 @@ namespace ZWord
 
         public static void Init(MonoBehaviour runner)
         {
+            Store.runner = runner;
 #if REVENUECAT && !UNITY_EDITOR
             runner.StartCoroutine(InitRevenueCat());
 #endif
@@ -97,26 +117,55 @@ namespace ZWord
 
         static IEnumerator InitRevenueCat()
         {
+            if (Available || starting) yield break;
             string key = ApiKey;
             if (string.IsNullOrEmpty(key) || key.StartsWith("REPLACE"))
             {
+                Status = "NO API KEY";
                 Debug.LogWarning("[ZWord] RevenueCat API key missing in GameConfig - store disabled.");
                 yield break;
             }
+            starting = true;
+            Status = "STARTING";
             if (GameConfig.UseRevenueCatTestStore)
                 Debug.LogWarning("[ZWord] Using the RevenueCat TEST STORE key - set GameConfig.UseRevenueCatTestStore = false before App Store / Play review.");
 
-            // The SDK sends its callbacks to this GameObject by name, so it lives at the root.
-            var go = new GameObject("ZWordPurchases");
-            UnityEngine.Object.DontDestroyOnLoad(go);
-            rc = go.AddComponent<Purchases>();
-            rc.useRuntimeSetup = true;
-            yield return null; // let Purchases.Start() pick the native wrapper first
+            if (rc == null)
+            {
+                // The SDK sends its callbacks to this GameObject by name, so it lives at the root.
+                var go = new GameObject("ZWordPurchases");
+                UnityEngine.Object.DontDestroyOnLoad(go);
+                rc = go.AddComponent<Purchases>();
+                rc.useRuntimeSetup = true;
+            }
+            // Purchases.Start() picks the native wrapper; configuring before that throws a NullReferenceException
+            // (it sets AdTracker at the same time, so wait for that - up to ~5 seconds).
+            for (int i = 0; i < 300 && rc.AdTracker == null; i++) yield return null;
+            if (rc.AdTracker == null)
+            {
+                Status = "SDK DID NOT START";
+                Debug.LogError("[ZWord] RevenueCat: Purchases.Start() never ran.");
+                starting = false;
+                yield break;
+            }
 
-            if (Debug.isDebugBuild) rc.SetDebugLogsEnabled(true);
-            // Anonymous app user id for now; add .SetAppUserId(...) here once player accounts exist.
-            rc.Configure(Purchases.PurchasesConfiguration.Builder.Init(key).Build());
+            try
+            {
+                if (Debug.isDebugBuild) rc.SetDebugLogsEnabled(true);
+                // Anonymous app user id for now; add .SetAppUserId(...) here once player accounts exist.
+                rc.Configure(Purchases.PurchasesConfiguration.Builder.Init(key).Build());
+            }
+            catch (Exception e)
+            {
+                Status = "SETUP ERROR";
+                Debug.LogError("[ZWord] RevenueCat Configure failed: " + e);
+                starting = false;
+                yield break;
+            }
+            starting = false;
             Available = true;
+            Status = "OK";
+            Debug.Log("[ZWord] RevenueCat ready (" + (key.StartsWith("appl_") ? "App Store" : key.StartsWith("goog_") ? "Google Play" : "test") + ")");
 
             LoadPrices();
             RefreshCustomerInfo();
@@ -166,7 +215,7 @@ namespace ZWord
             Grant(id, false);
             done?.Invoke(true, null);
 #elif REVENUECAT
-            if (!Available) { done?.Invoke(false, "STORE NOT AVAILABLE RIGHT NOW"); return; }
+            if (!Available) { done?.Invoke(false, NotReadyMessage()); return; }
             busy = true;
             rc.PurchaseProduct(id, result =>
             {
@@ -183,7 +232,7 @@ namespace ZWord
                 done?.Invoke(true, null);
             }, "inapp");
 #else
-            done?.Invoke(false, "STORE NOT AVAILABLE RIGHT NOW");
+            done?.Invoke(false, "STORE NOT AVAILABLE (NOT IN THIS BUILD)");
 #endif
         }
 
@@ -193,7 +242,7 @@ namespace ZWord
 #if UNITY_EDITOR
             done?.Invoke(true, Save.Data.supporter || IsPro ? "PURCHASES RESTORED" : "NOTHING TO RESTORE");
 #elif REVENUECAT
-            if (!Available) { done?.Invoke(false, "STORE NOT AVAILABLE RIGHT NOW"); return; }
+            if (!Available) { done?.Invoke(false, NotReadyMessage()); return; }
             rc.RestorePurchases((info, error) =>
             {
                 if (error != null) { done?.Invoke(false, "RESTORE FAILED - PLEASE TRY AGAIN"); return; }
@@ -203,7 +252,7 @@ namespace ZWord
                 done?.Invoke(true, has && !had ? "PURCHASES RESTORED" : has ? "ALL PURCHASES ARE ACTIVE" : "NOTHING TO RESTORE");
             });
 #else
-            done?.Invoke(false, "STORE NOT AVAILABLE RIGHT NOW");
+            done?.Invoke(false, "STORE NOT AVAILABLE (NOT IN THIS BUILD)");
 #endif
         }
 
@@ -233,7 +282,7 @@ namespace ZWord
             done?.Invoke(Save.Data.pro ? "(EDITOR) PRO ON - THE PAYWALL SHOWS ON DEVICES" : "(EDITOR) PRO OFF");
             await System.Threading.Tasks.Task.CompletedTask;
 #elif REVENUECAT && REVENUECAT_UI
-            if (!Available) { done?.Invoke("STORE NOT AVAILABLE RIGHT NOW"); return; }
+            if (!Available) { done?.Invoke(NotReadyMessage()); return; }
             try
             {
                 var result = await RevenueCatUI.PaywallsPresenter.PresentIfNeeded(requiredEntitlementIdentifier: GameConfig.ProEntitlement);
@@ -262,7 +311,7 @@ namespace ZWord
                 done?.Invoke("SOMETHING WENT WRONG - PLEASE TRY AGAIN");
             }
 #else
-            done?.Invoke("STORE NOT AVAILABLE RIGHT NOW");
+            done?.Invoke("STORE NOT AVAILABLE (NOT IN THIS BUILD)");
             await System.Threading.Tasks.Task.CompletedTask;
 #endif
         }
@@ -274,7 +323,7 @@ namespace ZWord
             done?.Invoke("(EDITOR) CUSTOMER CENTER SHOWS ON DEVICES");
             await System.Threading.Tasks.Task.CompletedTask;
 #elif REVENUECAT && REVENUECAT_UI
-            if (!Available) { done?.Invoke("STORE NOT AVAILABLE RIGHT NOW"); return; }
+            if (!Available) { done?.Invoke(NotReadyMessage()); return; }
             try
             {
                 // No callbacks used (they arrive on a background thread); we refresh once it closes.
@@ -286,7 +335,7 @@ namespace ZWord
             }
             RefreshCustomerInfo(() => done?.Invoke(null));
 #else
-            done?.Invoke("STORE NOT AVAILABLE RIGHT NOW");
+            done?.Invoke("STORE NOT AVAILABLE (NOT IN THIS BUILD)");
             await System.Threading.Tasks.Task.CompletedTask;
 #endif
         }

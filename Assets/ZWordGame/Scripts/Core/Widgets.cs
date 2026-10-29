@@ -375,6 +375,9 @@ namespace ZWord
         {
             var overlay = ZWordApp.I.NewPopup(title, onClose);
             var root = UI.Rect("Page_" + title, overlay).Stretch();
+            // the overlay bleeds under the notch / home bar, so pull the page back into the safe area
+            // (the sky background still bleeds out because SafeAreaBleed uses this fitter)
+            root.gameObject.AddComponent<SafeAreaFitter>();
             AppBackground(root);
             var leaf = (Sprite)null;
             if (leaf != null)
