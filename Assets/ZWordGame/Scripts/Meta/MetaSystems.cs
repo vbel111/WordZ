@@ -313,7 +313,7 @@ namespace ZWord
             new Def("Win {0} levels with 3 stars", () => Save.Data.threeStarWins, 5, 25, 100, 250),
             new Def("Find {0} bonus words", () => Save.Data.bonusWords, 10, 50, 200, 500),
             new Def("Unlock {0} categories", UnlockedCount, 7, 10, 15, 20),
-            new Def("Collect {0} stars", () => Save.StarPoints, 10000, 50000, 200000, 500000),
+            new Def("Collect {0} stars", () => Save.EarnedStars, 50, 150, 500, 1500),
             new Def("Find {0} words of 6+ letters", () => Save.Data.longWords, 10, 50, 200, 500),
             new Def("Make {0} combos", () => Save.Data.combos, 10, 50, 200, 600),
             new Def("Win {0} levels without hints", () => Save.Data.noHintWins, 5, 25, 100, 300),

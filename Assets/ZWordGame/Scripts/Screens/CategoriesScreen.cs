@@ -128,7 +128,7 @@ namespace ZWord
                 UI.Img(cost, Sprites.Rounded, Skin.Wood, "Bg", 2f).rectTransform.Stretch();
                 var star = Widgets.CurrencyIcon(cost, Currency.Stars, 46);
                 star.Place(new Vector2(0, 0.5f), new Vector2(40, 0), new Vector2(46, 46));
-                var ct = UI.Label(cost, cat.UnlockCost.ToString("N0", CultureInfo.InvariantCulture), 34, Color.white, TextAnchor.MiddleCenter);
+                var ct = UI.Label(cost, Save.StarsToUnlock(c).ToString("N0", CultureInfo.InvariantCulture), 34, Color.white, TextAnchor.MiddleCenter);
                 ct.rectTransform.Stretch(60, 0, 10, 0);
                 UI.Outlined(ct);
 
@@ -201,15 +201,15 @@ namespace ZWord
             var info = UI.Label(body, cat.LevelCount + " new levels", 34, Skin.InkSoft, TextAnchor.MiddleCenter, false);
             info.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -285), new Vector2(640, 50));
 
-            bool canStars = Save.StarPoints >= cat.UnlockCost;
-            var withStars = Widgets.PriceButton(body, new Vector2(520, 120), Currency.Stars, cat.UnlockCost.ToString("N0", CultureInfo.InvariantCulture), () =>
+            bool canStars = Save.EarnedStars >= Save.StarsToUnlock(c);
+            var withStars = Widgets.PriceButton(body, new Vector2(520, 120), Currency.Stars, (canStars ? "UNLOCK  " : "NEED ") + Save.StarsToUnlock(c), () =>
             {
                 if (Save.TryUnlock(c)) Unlocked(c);
                 else { AudioManager.Error(); ZWordApp.Toast(body, "NOT ENOUGH STARS", new Vector2(0, 0), Palette.Yellow); }
             }, canStars ? Skin.Green : Palette.Hex("A99C88"));
             ((RectTransform)withStars.transform).Place(new Vector2(0.5f, 1), new Vector2(0, -390), new Vector2(520, 120));
 
-            int gems = GameConfig.UnlockGems(cat.Group);
+            int gems = GameConfig.UnlockGems(Save.StarsToUnlock(c));
             var withGems = Widgets.PriceButton(body, new Vector2(520, 120), Currency.Gems, gems + "  INSTANT", () =>
             {
                 if (Save.TryUnlockWithGems(c)) Unlocked(c);

@@ -386,8 +386,22 @@ namespace ZWord
         {
             var cp = Cat(cat);
             EnsureStars(cp, lvl);
-            if (stars > cp.stars[lvl]) { cp.stars[lvl] = stars; Write(); }
+            if (stars > cp.stars[lvl]) { cp.stars[lvl] = stars; Write(); WalletChanged?.Invoke(); }
         }
+
+        /// <summary>All stars earned on levels (1-3 each) - the star counter players see. Never spent.</summary>
+        public static int EarnedStars
+        {
+            get
+            {
+                int s = 0;
+                for (int c = 0; c < WordData.Categories.Length; c++) s += TotalStars(c);
+                return s;
+            }
+        }
+
+        /// <summary>Stars needed to open a locked category (categories.json "cost" / 100: 50 or 100 stars).</summary>
+        public static int StarsToUnlock(int cat) => WordData.Categories[cat].UnlockCost / 100;
 
         public static int TotalStars(int cat)
         {
@@ -398,14 +412,13 @@ namespace ZWord
 
         public static bool Unlocked(int cat) => WordData.Categories[cat].UnlockCost <= 0 || Cat(cat).unlocked;
 
-        /// <summary>Unlock with star points (they are spent).</summary>
+        /// <summary>Unlock once enough stars are earned (stars are a milestone, not spent).</summary>
         public static bool TryUnlock(int cat)
         {
             if (Unlocked(cat)) return true;
-            int cost = WordData.Categories[cat].UnlockCost;
-            if (Data.stars < cost) return false;
+            if (EarnedStars < StarsToUnlock(cat)) return false;
             Cat(cat).unlocked = true;
-            StarPoints = Data.stars - cost;
+            Write();
             return true;
         }
 
@@ -413,7 +426,7 @@ namespace ZWord
         public static bool TryUnlockWithGems(int cat)
         {
             if (Unlocked(cat)) return true;
-            if (!TrySpendGems(GameConfig.UnlockGems(WordData.Categories[cat].Group))) return false;
+            if (!TrySpendGems(GameConfig.UnlockGems(StarsToUnlock(cat)))) return false;
             Cat(cat).unlocked = true;
             Write();
             return true;

@@ -55,7 +55,7 @@ namespace ZWord
         public void Refresh()
         {
             if (Text == null) return;
-            int v = Kind == Currency.Stars ? Save.StarPoints : Kind == Currency.Coins ? Save.Coins : Save.Gems;
+            int v = Kind == Currency.Stars ? Save.EarnedStars : Kind == Currency.Coins ? Save.Coins : Save.Gems;
             if (shown >= 0 && v != shown) Tween.Punch(transform, 0.15f, 0.25f);
             shown = v;
             Text.text = v.ToString("N0", CultureInfo.InvariantCulture);

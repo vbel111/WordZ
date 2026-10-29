@@ -104,7 +104,8 @@ namespace ZWord
         public const int ContinueCoins = 80;
 
         // category unlock
-        public static int UnlockGems(int group) => group <= 1 ? 0 : group == 2 ? 15 : 25;
+        /// <summary>Gems to skip a star goal: about 1 gem per 20 stars, at least 10 (150 stars = 10, 1,600 stars = 80).</summary>
+        public static int UnlockGems(int starsNeeded) => starsNeeded <= 0 ? 0 : System.Math.Max(10, (int)System.Math.Round(starsNeeded / 20.0));
 
         // map chests every 25 stars (50 levels x 3 stars = 150)
         public static readonly int[] ChestStars = { 25, 50, 75, 100, 125, 150 };
