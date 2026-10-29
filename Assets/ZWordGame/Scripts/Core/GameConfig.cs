@@ -34,8 +34,8 @@ namespace ZWord
 
         // links (edit before release)
         public const string SupportEmail = "support@wordz.game";
-        public const string PrivacyUrl = "https://example.com/wordz/privacy";
-        public const string TermsUrl = "https://example.com/wordz/terms";
+        public const string PrivacyUrl = "https://vbel111.github.io/WordZ/privacy.html";
+        public const string TermsUrl = "https://vbel111.github.io/WordZ/terms.html";
 
         // App Store Connect > your app > App Information > "Apple ID" (a number like 6741234567)
         public const string AppleAppId = "6826203884";
