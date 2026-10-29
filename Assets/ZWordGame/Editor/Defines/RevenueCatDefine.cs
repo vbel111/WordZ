@@ -48,7 +48,8 @@ namespace ZWord.EditorTools
                 if (present == has) continue;
                 if (present) defines.Add(define); else defines.Remove(define);
                 PlayerSettings.SetScriptingDefineSymbols(t, string.Join(";", defines));
-                UnityEngine.Debug.Log($"[ZWord] {(present ? "Added" : "Removed")} {define} define for {t.TargetName}.");
+                AssetDatabase.SaveAssets(); // write ProjectSettings.asset now so it can be committed
+                UnityEngine.Debug.Log($"[ZWord] {(present ? "Added" : "Removed")} {define} define for {t.TargetName} - commit ProjectSettings/ProjectSettings.asset.");
             }
         }
     }

@@ -90,6 +90,20 @@ namespace ZWord.EditorTools
             public int callbackOrder => -100;
             public void OnPreprocessBuild(UnityEditor.Build.Reporting.BuildReport report)
             {
+                // A store build without these defines compiles the purchase code out ("STORE NOT AVAILABLE").
+                var named = report.summary.platform == BuildTarget.iOS ? NamedBuildTarget.iOS
+                          : report.summary.platform == BuildTarget.Android ? NamedBuildTarget.Android : NamedBuildTarget.Unknown;
+                if (!named.Equals(NamedBuildTarget.Unknown))
+                {
+                    var defs = PlayerSettings.GetScriptingDefineSymbols(named);
+                    foreach (var need in new[] { "REVENUECAT", "REVENUECAT_UI", "ZWORD_NOTIFICATIONS" })
+                        if (!System.Array.Exists(defs.Split(';'), d => d.Trim() == need))
+                            throw new UnityEditor.Build.BuildFailedException(
+                                $"[ZWord] Scripting define '{need}' is missing for {named.TargetName}, so the store would be compiled out. " +
+                                "Open the project in Unity once (it adds the defines), then commit ProjectSettings/ProjectSettings.asset and build again.");
+                    Debug.Log("[ZWord] Store defines OK for " + named.TargetName + ": " + defs);
+                }
+
                 var now = System.DateTime.UtcNow;
                 var t = report.summary.platform;
                 if (t == BuildTarget.iOS)

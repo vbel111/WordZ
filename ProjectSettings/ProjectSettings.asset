@@ -597,7 +597,9 @@ PlayerSettings:
   webEnableSubmoduleStrippingCompatibility: 0
   webProgressiveAssetLoading: 0
   scriptingDefineSymbols:
-    Standalone: SENTIS_ANALYTICS_ENABLED;APP_UI_EDITOR_ONLY
+    Android: ZWORD_NOTIFICATIONS;REVENUECAT;REVENUECAT_UI
+    Standalone: SENTIS_ANALYTICS_ENABLED;APP_UI_EDITOR_ONLY;ZWORD_NOTIFICATIONS;REVENUECAT;REVENUECAT_UI
+    iPhone: ZWORD_NOTIFICATIONS;REVENUECAT;REVENUECAT_UI
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
